@@ -1,0 +1,263 @@
+// ═══════════════════════════════════════════════════
+// EFT TRACKER — server.js
+// Multi-user backend with Express + sql.js (SQLite)
+// ═══════════════════════════════════════════════════
+
+const express = require('express');
+const initSqlJs = require('sql.js');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'eft-tracker-secret-key-change-in-production';
+const DB_PATH = path.join(__dirname, 'eft_tracker.db');
+
+// ═══════ MIDDLEWARE ═══════
+app.use(express.json());
+app.use(express.static(path.join(__dirname)));
+
+// ═══════ DATABASE SETUP ═══════
+let db;
+
+async function initDB() {
+    const SQL = await initSqlJs();
+
+    // Load existing DB file or create new
+    if (fs.existsSync(DB_PATH)) {
+        const fileBuffer = fs.readFileSync(DB_PATH);
+        db = new SQL.Database(fileBuffer);
+    } else {
+        db = new SQL.Database();
+    }
+
+    // Create tables
+    db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL COLLATE NOCASE,
+      password_hash TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+    db.run(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      user_id INTEGER PRIMARY KEY,
+      kappa_found TEXT DEFAULT '[]',
+      hideout_built TEXT DEFAULT '[]',
+      hideout_inventory TEXT DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+    saveDB();
+    console.log('  ✓ Database initialized');
+}
+
+function saveDB() {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(DB_PATH, buffer);
+}
+
+// Helper to get a single row
+function getRow(sql, params = []) {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    let row = null;
+    if (stmt.step()) {
+        row = stmt.getAsObject();
+    }
+    stmt.free();
+    return row;
+}
+
+// Helper to get all rows
+function getAll(sql, params = []) {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+        rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+}
+
+// ═══════ AUTH MIDDLEWARE ═══════
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token requerido' });
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch {
+        return res.status(403).json({ error: 'Token inválido o expirado' });
+    }
+}
+
+// ═══════ AUTH ROUTES ═══════
+
+// Register
+app.post('/api/register', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+    }
+    if (username.length < 2 || username.length > 30) {
+        return res.status(400).json({ error: 'El usuario debe tener entre 2 y 30 caracteres' });
+    }
+    if (password.length < 4) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+    }
+
+    // Check if user exists
+    const existing = getRow('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing) {
+        return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });
+    }
+
+    const hash = bcrypt.hashSync(password, 10);
+    db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
+
+    // Get the last inserted ID
+    const user = getRow('SELECT last_insert_rowid() as id');
+    const userId = user.id;
+
+    // Create empty profile
+    db.run('INSERT INTO profiles (user_id) VALUES (?)', [userId]);
+    saveDB();
+
+    const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: userId, username } });
+});
+
+// Login
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+    }
+
+    const user = getRow('SELECT * FROM users WHERE username = ?', [username]);
+    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+        return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user.id, username: user.username } });
+});
+
+// ═══════ PROFILE ROUTES ═══════
+
+// List all profiles (public)
+app.get('/api/profiles', (req, res) => {
+    const profiles = getAll(`
+    SELECT u.id, u.username, u.created_at,
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.updated_at
+    FROM users u
+    LEFT JOIN profiles p ON u.id = p.user_id
+    ORDER BY u.username
+  `);
+
+    res.json(profiles.map(p => ({
+        id: p.id,
+        username: p.username,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        kappa_found: JSON.parse(p.kappa_found || '[]'),
+        hideout_built: JSON.parse(p.hideout_built || '[]'),
+        hideout_inventory: JSON.parse(p.hideout_inventory || '{}')
+    })));
+});
+
+// Get specific profile
+app.get('/api/profiles/:id', (req, res) => {
+    const profile = getRow(`
+    SELECT u.id, u.username, u.created_at,
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.updated_at
+    FROM users u
+    LEFT JOIN profiles p ON u.id = p.user_id
+    WHERE u.id = ?
+  `, [parseInt(req.params.id)]);
+
+    if (!profile) {
+        return res.status(404).json({ error: 'Perfil no encontrado' });
+    }
+
+    res.json({
+        id: profile.id,
+        username: profile.username,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        kappa_found: JSON.parse(profile.kappa_found || '[]'),
+        hideout_built: JSON.parse(profile.hideout_built || '[]'),
+        hideout_inventory: JSON.parse(profile.hideout_inventory || '{}')
+    });
+});
+
+// Update own profile (requires auth)
+app.put('/api/profile', authenticateToken, (req, res) => {
+    const { kappa_found, hideout_built, hideout_inventory } = req.body;
+
+    const sets = [];
+    const params = [];
+
+    if (kappa_found !== undefined) {
+        sets.push('kappa_found = ?');
+        params.push(JSON.stringify(kappa_found));
+    }
+    if (hideout_built !== undefined) {
+        sets.push('hideout_built = ?');
+        params.push(JSON.stringify(hideout_built));
+    }
+    if (hideout_inventory !== undefined) {
+        sets.push('hideout_inventory = ?');
+        params.push(JSON.stringify(hideout_inventory));
+    }
+
+    if (sets.length === 0) {
+        return res.status(400).json({ error: 'No hay datos para actualizar' });
+    }
+
+    sets.push("updated_at = datetime('now')");
+    params.push(req.user.id);
+
+    db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
+    saveDB();
+    res.json({ success: true });
+});
+
+// Get current user info
+app.get('/api/me', authenticateToken, (req, res) => {
+    const user = getRow('SELECT id, username, created_at FROM users WHERE id = ?', [req.user.id]);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(user);
+});
+
+// ═══════ SERVE FRONTEND ═══════
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// ═══════ START SERVER ═══════
+async function start() {
+    await initDB();
+    app.listen(PORT, () => {
+        console.log('');
+        console.log('  ╔═══════════════════════════════════════╗');
+        console.log(`  ║   EFT Tracker Server running          ║`);
+        console.log(`  ║   http://localhost:${PORT}               ║`);
+        console.log('  ╚═══════════════════════════════════════╝');
+        console.log('');
+    });
+}
+
+start();

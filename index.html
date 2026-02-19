@@ -1612,6 +1612,7 @@
                 opacity: 0;
                 transform: scale(.9) translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: scale(1) translateY(0);
@@ -1792,26 +1793,364 @@
             .stations-grid {
                 grid-template-columns: 1fr 1fr
             }
-		}
-		.module-icon-kappa {
-		  display: inline-block;
-		  width: 124px;          
-		  height: 124px;         
+        }
 
-		  background-image: url('images/kappa_icon.webp');
-		  background-size: contain; 
-		  background-repeat: no-repeat; 
-		  background-position: center;  
-		}
-		.module-icon-hidedout {
-		  display: inline-block;
-		  width: 124px;          
-		  height: 124px;         
+        .module-icon-kappa {
+            display: inline-block;
+            width: 124px;
+            height: 124px;
 
-		  background-image: url('images/hideout_icon.png');
-		  background-size: contain; 
-		  background-repeat: no-repeat; 
-		  background-position: center;  
+            background-image: url('images/kappa_icon.webp');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .module-icon-hidedout {
+            display: inline-block;
+            width: 124px;
+            height: 124px;
+
+            background-image: url('images/hideout_icon.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* ═══════ AUTH & PROFILE STYLES ═══════ */
+        .auth-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .85);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-modal-overlay.active {
+            display: flex;
+        }
+
+        .auth-modal {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            animation: modalIn .3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(.9) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .auth-modal-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: .5rem;
+            background: linear-gradient(135deg, var(--gold-l), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .auth-modal-sub {
+            text-align: center;
+            font-size: .85rem;
+            color: var(--text2);
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, .04);
+            padding: 3px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 8px;
+            border-radius: 7px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            border: none;
+            transition: all var(--tr);
+            color: var(--text2);
+            background: transparent;
+            text-align: center;
+        }
+
+        .auth-tab.active {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .18), rgba(201, 168, 76, .08));
+            color: var(--gold-l);
+            border: 1px solid rgba(201, 168, 76, .25);
+        }
+
+        .auth-field {
+            margin-bottom: 1rem;
+        }
+
+        .auth-field label {
+            display: block;
+            font-size: .78rem;
+            color: var(--text2);
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .auth-field input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: .95rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all var(--tr);
+        }
+
+        .auth-field input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(201, 168, 76, .1);
+        }
+
+        .auth-error {
+            color: var(--red);
+            font-size: .82rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            min-height: 1.2em;
+        }
+
+        .auth-submit {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all var(--tr);
+            background: linear-gradient(135deg, var(--gold-d), var(--gold));
+            color: #fff;
+        }
+
+        .auth-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(201, 168, 76, .3);
+        }
+
+        .auth-submit:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Profile Selector */
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+        }
+
+        .profile-select-wrapper {
+            position: relative;
+        }
+
+        .profile-select {
+            appearance: none;
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 36px 8px 14px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--tr);
+            min-width: 160px;
+        }
+
+        .profile-select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(201, 168, 76, .1);
+        }
+
+        .profile-select-wrapper::after {
+            content: '▾';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text2);
+            pointer-events: none;
+            font-size: .8rem;
+        }
+
+        .profile-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .78rem;
+            color: var(--text2);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .btn-auth {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all var(--tr);
+            white-space: nowrap;
+        }
+
+        .btn-auth:hover {
+            border-color: var(--gold);
+            color: var(--gold-l);
+            background: rgba(201, 168, 76, .05);
+        }
+
+        .btn-auth.logged-in {
+            border-color: rgba(74, 222, 128, .3);
+            color: var(--green);
+        }
+
+        .btn-auth.logged-in:hover {
+            border-color: rgba(248, 113, 113, .4);
+            color: var(--red);
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid rgba(248, 113, 113, .3);
+            color: var(--red);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all var(--tr);
+        }
+
+        .btn-logout:hover {
+            background: rgba(248, 113, 113, .08);
+            border-color: rgba(248, 113, 113, .5);
+        }
+
+        .header-profile {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .header-profile-select {
+            appearance: none;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 28px 5px 10px;
+            border-radius: 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--tr);
+        }
+
+        .header-profile-select:focus {
+            border-color: var(--gold);
+        }
+
+        .header-profile-wrapper {
+            position: relative;
+        }
+
+        .header-profile-wrapper::after {
+            content: '▾';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text3);
+            pointer-events: none;
+            font-size: .7rem;
+        }
+
+        /* Read-only banner */
+        .readonly-banner {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: .8rem;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(96, 165, 250, .1), rgba(96, 165, 250, .05));
+            border: 1px solid rgba(96, 165, 250, .2);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+            color: var(--blue);
+            letter-spacing: .5px;
+        }
+
+        .readonly-banner.active {
+            display: flex;
+        }
+
+        .readonly-banner .readonly-icon {
+            font-size: 1.2rem;
+        }
+
+        .readonly-banner .readonly-user {
+            font-weight: 700;
+        }
     </style>
 </head>
 
@@ -1824,6 +2163,20 @@
             <div class="home-title">EFT TRACKER</div>
             <div class="home-subtitle">Selecciona un módulo para continuar</div>
         </div>
+
+        <!-- Profile Section -->
+        <div class="profile-section" id="home-profile-section">
+            <span class="profile-label">PERFIL:</span>
+            <div class="profile-select-wrapper">
+                <select class="profile-select" id="home-profile-select" onchange="switchProfile(this.value)">
+                    <option value="">— Sin perfiles —</option>
+                </select>
+            </div>
+            <button class="btn-auth" id="btn-auth-home" onclick="openAuthModal()">🔑 INICIAR SESIÓN</button>
+            <button class="btn-logout" id="btn-logout-home" onclick="logout()" style="display:none">CERRAR
+                SESIÓN</button>
+        </div>
+
         <div class="module-cards">
             <div class="module-card kappa" id="card-kappa" onclick="navigate('kappa')">
                 <span class="module-icon-kappa"></span>
@@ -1851,7 +2204,7 @@
                 </div>
             </div>
         </div>
-        <div class="home-version">tarkov.dev API — EFT Tracker v2.2</div>
+        <div class="home-version">tarkov.dev API — EFT Tracker v3.0</div>
     </div>
 
     <!-- ═══════════════════════ SHARED HEADER ═══════════════════════ -->
@@ -1860,14 +2213,23 @@
             <button class="btn-home" onclick="navigate('home')">← MENÚ</button>
             <div class="logo-text" id="header-logo">EFT</div>
             <div class="nav-tabs">
-                <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')"><img src="images/kappa_icon.webp" width="24" height="24" style="vertical-align: middle;">  KAPPA</button>
-                <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')"><img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> REFUGIO</button>
+                <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')"><img src="images/kappa_icon.webp"
+                        width="24" height="24" style="vertical-align: middle;"> KAPPA</button>
+                <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')"><img
+                        src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;">
+                    REFUGIO</button>
             </div>
             <div class="header-progress">
                 <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
                         0</strong></div>
                 <div class="prog-bar-bg">
                     <div class="prog-bar-fill" id="header-prog-fill" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="header-profile" id="header-profile-area">
+                <div class="header-profile-wrapper">
+                    <select class="header-profile-select" id="header-profile-select"
+                        onchange="switchProfile(this.value)"></select>
                 </div>
             </div>
             <div style="display:flex;gap:.5rem">
@@ -1952,7 +2314,7 @@
                 <button class="btn btn-ghost" onclick="loadHideout()" style="margin-top:1rem">Reintentar</button>
             </div>
             <div id="h-content" style="display:none">
-                
+
                 <!-- View Tabs -->
                 <div class="hideout-view-tabs">
                     <button class="hideout-view-tab active" id="tab-stations" onclick="switchHideoutView('stations')">
@@ -2026,7 +2388,8 @@
                                 placeholder="Buscar item..." /></div>
                         <div class="filter-tabs">
                             <button class="filter-tab active" data-filter="all" id="hi-filter-all">Todos</button>
-                            <button class="filter-tab found-tab" data-filter="found" id="hi-filter-found">Completos</button>
+                            <button class="filter-tab found-tab" data-filter="found"
+                                id="hi-filter-found">Completos</button>
                             <button class="filter-tab" data-filter="missing" id="hi-filter-missing">Faltantes</button>
                         </div>
                     </div>
@@ -2071,6 +2434,55 @@
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-cancel" onclick="closeQuantityModal()">Cancelar</button>
                 <button class="modal-btn modal-btn-confirm" onclick="confirmQuantityModal()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Read-only banner (inserted dynamically into pages) -->
+
+    <!-- Auth Modal -->
+    <div class="auth-modal-overlay" id="auth-modal">
+        <div class="auth-modal">
+            <div class="auth-modal-title">EFT TRACKER</div>
+            <div class="auth-modal-sub">Inicia sesión o crea una cuenta para guardar tu progreso</div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Iniciar
+                    Sesión</button>
+                <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Registrarse</button>
+            </div>
+            <div id="auth-form-login">
+                <div class="auth-field">
+                    <label>Usuario</label>
+                    <input type="text" id="login-username" placeholder="Tu nombre de usuario" autocomplete="username">
+                </div>
+                <div class="auth-field">
+                    <label>Contraseña</label>
+                    <input type="password" id="login-password" placeholder="Tu contraseña"
+                        autocomplete="current-password">
+                </div>
+                <div class="auth-error" id="login-error"></div>
+                <button class="auth-submit" id="btn-login" onclick="doLogin()">ENTRAR</button>
+            </div>
+            <div id="auth-form-register" style="display:none">
+                <div class="auth-field">
+                    <label>Usuario</label>
+                    <input type="text" id="register-username" placeholder="Elige un nombre" autocomplete="username">
+                </div>
+                <div class="auth-field">
+                    <label>Contraseña</label>
+                    <input type="password" id="register-password" placeholder="Mínimo 4 caracteres"
+                        autocomplete="new-password">
+                </div>
+                <div class="auth-field">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="register-password2" placeholder="Repite la contraseña"
+                        autocomplete="new-password">
+                </div>
+                <div class="auth-error" id="register-error"></div>
+                <button class="auth-submit" id="btn-register" onclick="doRegister()">CREAR CUENTA</button>
+            </div>
+            <div style="text-align:center;margin-top:1rem">
+                <button class="btn-auth" onclick="closeAuthModal()" style="font-size:.75rem">✕ CERRAR</button>
             </div>
         </div>
     </div>
