@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>EFT Tracker — Kappa & Refugio</title>
+    <meta name="description" content="Rastrea items de Kappa y construcciones del Refugio en Escape from Tarkov." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0a0c0f;
+            --bg2: #111418;
+            --bgcard: #161b22;
+            --bgcard2: #1d2330;
+            --border: rgba(180, 140, 60, .15);
+            --border-g: rgba(80, 200, 100, .5);
+            --border-b: rgba(60, 120, 200, .4);
+            --border-y: rgba(234, 179, 8, .5);
+            --gold: #c9a84c;
+            --gold-l: #e8c87a;
+            --gold-d: #8a6a20;
+            --green: #4ade80;
+            --green-d: #16a34a;
+            --blue: #60a5fa;
+            --blue-d: #2563eb;
+            --red: #f87171;
+            --yellow: #eab308;
+            --yellow-d: #ca8a04;
+            --text: #e8e0d0;
+            --text2: #8a8070;
+            --text3: #50484a;
+            --r: 12px;
+            --tr: .22s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 20% 50%, rgba(201, 168, 76, .03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(74, 222, 128, .02) 0%, transparent 40%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23c9a84c' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* PAGES */
+        .page {
+            display: none !important;
+        }
+
+        .page.active {
+            display: block !important;
+        }
+
+        #page-home.active {
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem
+        }
+
+        /* HOME */
+        .home-header {
+            text-align: center;
+            margin-bottom: 3rem
+        }
+
+        .home-eyebrow {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .75rem;
+            letter-spacing: 5px;
+            color: var(--text2);
+            text-transform: uppercase;
+            margin-bottom: .75rem
+        }
+
+        .home-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, var(--gold-l), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1
+        }
+
+        .home-subtitle {
+            font-size: .9rem;
+            color: var(--text2);
+            margin-top: .75rem;
+            letter-spacing: 1px
+        }
+
+        .module-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            max-width: 760px;
+            width: 100%
+        }
+
+        .module-card {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            cursor: pointer;
+            transition: all .3s cubic-bezier(.4, 0, .2, 1);
+            text-align: center;
+            position: relative;
+            overflow: hidden
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity .3s
+        }
+
+        .module-card.kappa::before {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .08), transparent)
+        }
+
+        .module-card.hideout::before {
+            background: linear-gradient(135deg, rgba(96, 165, 250, .08), transparent)
+        }
+
+        .module-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--gold);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(201, 168, 76, .12)
+        }
+
+        .module-card:hover::before {
+            opacity: 1
+        }
+
+        .module-card.hideout:hover {
+            border-color: var(--blue);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(96, 165, 250, .1)
+        }
+
+        .module-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1.2rem;
+            display: block
+        }
+
+        .module-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: .5rem
+        }
+
+        .module-card.kappa .module-title {
+            color: var(--gold-l)
+        }
+
+        .module-card.hideout .module-title {
+            color: var(--blue)
+        }
+
+        .module-desc {
+            font-size: .8rem;
+            color: var(--text2);
+            line-height: 1.5;
+            margin-bottom: 1.5rem
+        }
+
+        .module-mini-progress {
+            margin-top: .5rem
+        }
+
+        .mini-prog-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: .7rem;
+            color: var(--text3);
+            margin-bottom: 5px;
+            font-family: 'Rajdhani', sans-serif
+        }
+
+        .mini-prog-label span:last-child {
+            color: var(--gold);
+            font-weight: 700
+        }
+
+        .module-card.hideout .mini-prog-label span:last-child {
+            color: var(--blue)
+        }
+
+        .mini-prog-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, .05);
+            border-radius: 99px;
+            overflow: hidden
+        }
+
+        .mini-prog-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width .6s
+        }
+
+        .module-card.kappa .mini-prog-fill {
+            background: linear-gradient(90deg, var(--gold-d), var(--gold-l))
+        }
+
+        .module-card.hideout .mini-prog-fill {
+            background: linear-gradient(90deg, var(--blue-d), var(--blue))
+        }
+
+        .home-version {
+            margin-top: 2rem;
+            font-size: .7rem;
+            color: var(--text3);
+            letter-spacing: 2px
+        }
+
+        /* SHARED HEADER */
+        #app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 12, 15, .92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: none
+        }
+
+        #app-header.visible {
+            display: block
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            height: 66px;
+            gap: 1.2rem
+        }
+
+        .btn-home {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all var(--tr)
+        }
+
+        .btn-home:hover {
+            border-color: var(--gold);
+            color: var(--gold-l);
+            background: rgba(201, 168, 76, .05)
+        }
+
+        .logo-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--gold-l), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, .04);
+            padding: 3px;
+            border-radius: 9px;
+            border: 1px solid var(--border)
+        }
+
+        .nav-tab {
+            padding: 6px 18px;
+            border-radius: 7px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .82rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            border: none;
+            transition: all var(--tr);
+            color: var(--text2);
+            background: transparent;
+            white-space: nowrap
+        }
+
+        .nav-tab.active-kappa {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .18), rgba(201, 168, 76, .08));
+            color: var(--gold-l);
+            border: 1px solid rgba(201, 168, 76, .25)
+        }
+
+        .nav-tab.active-hideout {
+            background: linear-gradient(135deg, rgba(96, 165, 250, .18), rgba(96, 165, 250, .08));
+            color: var(--blue);
+            border: 1px solid rgba(96, 165, 250, .25)
+        }
+
+        .header-progress {
+            flex: 1;
+            max-width: 320px
+        }
+
+        .prog-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: .7rem;
+            color: var(--text2);
+            letter-spacing: 1px
+        }
+
+        .prog-label strong {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .95rem
+        }
+
+        #header-prog-val {
+            color: var(--gold-l)
+        }
+
+        #header-prog-val.blue {
+            color: var(--blue)
+        }
+
+        .prog-bar-bg {
+            height: 6px;
+            background: rgba(255, 255, 255, .05);
+            border-radius: 99px;
+            overflow: hidden;
+            border: 1px solid rgba(180, 140, 60, .08)
+        }
+
+        .prog-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold-d), var(--gold-l));
+            border-radius: 99px;
+            transition: width .6s
+        }
+
+        .prog-bar-fill.blue {
+            background: linear-gradient(90deg, var(--blue-d), var(--blue))
+        }
+
+        /* SHARED MODULE PAGE LAYOUT */
+        .mod-page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem
+        }
+
+        /* STATS BAR */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem
+        }
+
+        .stat-card {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all var(--tr)
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px)
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0
+        }
+
+        .stat-icon.total {
+            background: rgba(201, 168, 76, .12)
+        }
+
+        .stat-icon.found,
+        .stat-icon.built {
+            background: rgba(74, 222, 128, .12)
+        }
+
+        .stat-icon.remaining {
+            background: rgba(248, 113, 113, .1)
+        }
+
+        .stat-number {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            line-height: 1
+        }
+
+        .stat-number.total {
+            color: var(--gold-l)
+        }
+
+        .stat-number.found,
+        .stat-number.built {
+            color: var(--green)
+        }
+
+        .stat-number.remaining {
+            color: var(--red)
+        }
+
+        .stat-label {
+            font-size: .72rem;
+            color: var(--text2);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-top: 2px
+        }
+
+        /* TOOLBAR */
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 16px 10px 40px;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-family: 'Inter', sans-serif;
+            transition: all var(--tr);
+            outline: none
+        }
+
+        .search-box input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(201, 168, 76, .1)
+        }
+
+        .search-box input::placeholder {
+            color: var(--text3)
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text3)
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 5px;
+            background: var(--bg2);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border)
+        }
+
+        .filter-tab {
+            padding: 7px 16px;
+            border-radius: 7px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .85rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            border: none;
+            transition: all var(--tr);
+            color: var(--text2);
+            background: transparent
+        }
+
+        .filter-tab.active {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .15), rgba(201, 168, 76, .08));
+            color: var(--gold-l);
+            border: 1px solid rgba(201, 168, 76, .25)
+        }
+
+        .filter-tab.active.found-tab {
+            background: linear-gradient(135deg, rgba(74, 222, 128, .15), rgba(74, 222, 128, .05));
+            color: var(--green);
+            border-color: rgba(74, 222, 128, .3)
+        }
+
+        /* Hideout view tabs */
+        .hideout-view-tabs {
+            display: flex;
+            gap: 5px;
+            background: var(--bg2);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .hideout-view-tab {
+            flex: 1;
+            padding: 10px 20px;
+            border-radius: 7px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            border: none;
+            transition: all var(--tr);
+            color: var(--text2);
+            background: transparent;
+            text-align: center;
+        }
+
+        .hideout-view-tab.active {
+            background: linear-gradient(135deg, rgba(96, 165, 250, .18), rgba(96, 165, 250, .08));
+            color: var(--blue);
+            border: 1px solid rgba(96, 165, 250, .25);
+        }
+
+        /* LOADING / ERROR */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            gap: 1.5rem
+        }
+
+        .loader {
+            width: 56px;
+            height: 56px;
+            border: 3px solid rgba(201, 168, 76, .1);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin .9s linear infinite
+        }
+
+        .loader.blue-loader {
+            border-top-color: var(--blue)
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .loading-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 3px;
+            color: var(--text2);
+            text-transform: uppercase
+        }
+
+
+
+        .error-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 40vh;
+            gap: 1rem;
+            text-align: center;
+            justify-content: center;
+            padding: 2rem
+        }
+
+        .error-text {
+            color: var(--red);
+            font-size: 1rem;
+            max-width: 500px;
+            line-height: 1.6
+        }
+
+        /* SECTION HEADER */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem
+        }
+
+        .section-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text2);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            white-space: nowrap
+        }
+
+        .section-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent)
+        }
+
+        .section-count {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .82rem;
+            color: var(--text3);
+            background: var(--bg2);
+            padding: 3px 10px;
+            border-radius: 99px;
+            border: 1px solid var(--border);
+            white-space: nowrap
+        }
+
+        /* KAPPA GRID */
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+            gap: 1rem
+        }
+
+        .item-card {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all var(--tr);
+            position: relative;
+            user-select: none
+        }
+
+        .item-card:hover {
+            border-color: rgba(201, 168, 76, .4);
+            transform: translateY(-4px);
+            box-shadow: 0 0 20px rgba(201, 168, 76, .15)
+        }
+
+        .item-card.is-found {
+            border-color: var(--border-g);
+            background: linear-gradient(145deg, #131d17, var(--bgcard));
+            box-shadow: 0 0 20px rgba(74, 222, 128, .2)
+        }
+
+        .item-card.is-found:hover {
+            border-color: rgba(74, 222, 128, .7);
+            box-shadow: 0 0 30px rgba(74, 222, 128, .25)
+        }
+
+        /* Partial state for hideout items */
+        .item-card.is-partial {
+            border-color: var(--border-y);
+            background: linear-gradient(145deg, #1d1d13, var(--bgcard));
+            box-shadow: 0 0 20px rgba(234, 179, 8, .15)
+        }
+
+        .item-card.is-partial:hover {
+            border-color: rgba(234, 179, 8, .7);
+            box-shadow: 0 0 30px rgba(234, 179, 8, .2)
+        }
+
+        .item-img-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            background: #0d1117;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden
+        }
+
+        .item-img-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(201, 168, 76, .03), transparent);
+            z-index: 1
+        }
+
+        .item-card.is-found .item-img-wrapper::before {
+            background: linear-gradient(135deg, rgba(74, 222, 128, .06), transparent)
+        }
+
+        .item-card.is-partial .item-img-wrapper::before {
+            background: linear-gradient(135deg, rgba(234, 179, 8, .06), transparent)
+        }
+
+        .item-img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+            transition: transform var(--tr), filter var(--tr);
+            position: relative;
+            z-index: 2;
+            image-rendering: pixelated
+        }
+
+        .item-card.is-found .item-img {
+            filter: brightness(1.1) saturate(1.2)
+        }
+
+        .item-card.is-partial .item-img {
+            filter: brightness(1) saturate(1)
+        }
+
+        .item-card:not(.is-found):not(.is-partial) .item-img {
+            filter: brightness(.75) saturate(.6)
+        }
+
+        .item-card:hover .item-img {
+            transform: scale(1.08);
+            filter: brightness(1) saturate(1)
+        }
+
+        .item-card.is-found:hover .item-img {
+            filter: brightness(1.15) saturate(1.3)
+        }
+
+        .found-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--green-d);
+            border: 2px solid var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            transform: scale(.5) rotate(-20deg);
+            transition: all .3s cubic-bezier(.34, 1.56, .64, 1)
+        }
+
+        .item-card.is-found .found-badge {
+            opacity: 1;
+            transform: scale(1) rotate(0)
+        }
+
+        .found-badge svg {
+            width: 13px;
+            height: 13px;
+            color: #fff
+        }
+
+        /* Partial badge for hideout items */
+        .partial-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            background: var(--yellow-d);
+            border: 2px solid var(--yellow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            transform: scale(.5);
+            transition: all .3s cubic-bezier(.34, 1.56, .64, 1);
+            padding: 0 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .7rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .item-card.is-partial .partial-badge {
+            opacity: 1;
+            transform: scale(1)
+        }
+
+        .count-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, .6);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: .65rem;
+            color: var(--text3);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            z-index: 10
+        }
+
+        .item-card.is-found .count-badge {
+            border-color: rgba(74, 222, 128, .3);
+            color: var(--green)
+        }
+
+        .item-card.is-partial .count-badge {
+            border-color: rgba(234, 179, 8, .4);
+            color: var(--yellow)
+        }
+
+        .item-info {
+            padding: 10px 12px 12px
+        }
+
+        .item-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.25;
+            letter-spacing: .3px;
+            transition: color var(--tr)
+        }
+
+        .item-card.is-found .item-name {
+            color: #d4f0e0
+        }
+
+        .item-card.is-partial .item-name {
+            color: #f0ead4
+        }
+
+        .item-short {
+            font-size: .68rem;
+            color: var(--text3);
+            margin-top: 3px;
+            letter-spacing: .5px
+        }
+
+        .item-card.is-found .item-short {
+            color: rgba(74, 222, 128, .5)
+        }
+
+        .item-card.is-partial .item-short {
+            color: rgba(234, 179, 8, .6)
+        }
+
+        .fir-tag {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 7px;
+            background: rgba(201, 168, 76, .08);
+            border: 1px solid rgba(201, 168, 76, .2);
+            border-radius: 4px;
+            font-size: .6rem;
+            color: var(--gold);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600
+        }
+
+        /* Quantity progress badge */
+        .qty-progress {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 7px;
+            background: rgba(96, 165, 250, .08);
+            border: 1px solid rgba(96, 165, 250, .25);
+            border-radius: 4px;
+            font-size: .65rem;
+            color: var(--blue);
+            letter-spacing: .5px;
+            font-weight: 700;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        .item-card.is-found .qty-progress {
+            background: rgba(74, 222, 128, .1);
+            border-color: rgba(74, 222, 128, .3);
+            color: var(--green);
+        }
+
+        .item-card.is-partial .qty-progress {
+            background: rgba(234, 179, 8, .1);
+            border-color: rgba(234, 179, 8, .35);
+            color: var(--yellow);
+        }
+
+        @keyframes scan-found {
+            0% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, .5)
+            }
+
+            70% {
+                box-shadow: 0 0 0 18px rgba(74, 222, 128, 0)
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0)
+            }
+        }
+
+        .pulse-found {
+            animation: scan-found .6s ease-out
+        }
+
+        @keyframes scan-partial {
+            0% {
+                box-shadow: 0 0 0 0 rgba(234, 179, 8, .5)
+            }
+
+            70% {
+                box-shadow: 0 0 0 18px rgba(234, 179, 8, 0)
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(234, 179, 8, 0)
+            }
+        }
+
+        .pulse-partial {
+            animation: scan-partial .6s ease-out
+        }
+
+        /* COMPLETE BANNER */
+        .complete-banner {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .1), rgba(74, 222, 128, .1));
+            border: 1px solid rgba(201, 168, 76, .4);
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            animation: glow-pulse 3s ease-in-out infinite
+        }
+
+        @keyframes glow-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(201, 168, 76, .1)
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(201, 168, 76, .25)
+            }
+        }
+
+        .banner-icon {
+            font-size: 3rem
+        }
+
+        .banner-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gold-l);
+            letter-spacing: 2px
+        }
+
+        .banner-sub {
+            font-size: .85rem;
+            color: var(--text2);
+            margin-top: 4px
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            grid-column: 1/-1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5rem 2rem;
+            gap: 1rem;
+            color: var(--text3);
+            text-align: center
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            opacity: .4
+        }
+
+        .empty-state-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 1px
+        }
+
+        /* HIDEOUT STATION GRID */
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem
+        }
+
+        .station-card {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 1.4rem;
+            cursor: pointer;
+            transition: all var(--tr);
+            position: relative;
+            overflow: hidden
+        }
+
+        .station-card::after {
+            content: '›';
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            color: var(--text3);
+            transition: all var(--tr)
+        }
+
+        .station-card:hover {
+            border-color: rgba(96, 165, 250, .4);
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(96, 165, 250, .1)
+        }
+
+        .station-card:hover::after {
+            right: .7rem;
+            color: var(--blue)
+        }
+
+        .station-card.all-built {
+            border-color: rgba(74, 222, 128, .4);
+            background: linear-gradient(145deg, #131d18, var(--bgcard))
+        }
+
+        .station-card.all-built:hover {
+            border-color: rgba(74, 222, 128, .6);
+            box-shadow: 0 0 20px rgba(74, 222, 128, .15)
+        }
+
+        .station-card.all-built::after {
+            content: '✓';
+            color: var(--green)
+        }
+
+        .st-icon {
+            font-size: 2rem;
+            margin-bottom: .8rem;
+            display: block
+        }
+
+        .st-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: .5px;
+            margin-bottom: .8rem
+        }
+
+        .station-card.all-built .st-name {
+            color: #d4f0e0
+        }
+
+        .st-prog-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: .68rem;
+            color: var(--text3);
+            margin-bottom: 5px;
+            font-family: 'Rajdhani', sans-serif
+        }
+
+        .st-prog-label span:last-child {
+            color: var(--blue);
+            font-weight: 700
+        }
+
+        .station-card.all-built .st-prog-label span:last-child {
+            color: var(--green)
+        }
+
+        .st-prog-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, .05);
+            border-radius: 99px;
+            overflow: hidden
+        }
+
+        .st-prog-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue-d), var(--blue));
+            border-radius: 99px;
+            transition: width .5s
+        }
+
+        .station-card.all-built .st-prog-fill {
+            background: linear-gradient(90deg, var(--green-d), var(--green))
+        }
+
+        /* STATION DETAIL */
+        .detail-back {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            color: var(--blue);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            transition: color var(--tr)
+        }
+
+        .detail-back:hover {
+            color: var(--text)
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem
+        }
+
+        .detail-station-icon {
+            font-size: 2.5rem
+        }
+
+        .detail-station-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--blue);
+            letter-spacing: 2px
+        }
+
+        .detail-station-sub {
+            font-size: .8rem;
+            color: var(--text2);
+            margin-top: 2px
+        }
+
+        /* LEVEL SECTIONS */
+        .level-section {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: border-color var(--tr)
+        }
+
+        .level-section.level-built {
+            border-color: rgba(74, 222, 128, .4);
+            background: linear-gradient(145deg, #131d18, var(--bgcard))
+        }
+
+        .level-section.level-locked {
+            opacity: .4;
+            pointer-events: none
+        }
+
+        .level-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.2rem;
+            cursor: pointer;
+            transition: background var(--tr)
+        }
+
+        .level-header:hover {
+            background: rgba(255, 255, 255, .02)
+        }
+
+        .level-label {
+            display: flex;
+            align-items: center;
+            gap: .75rem
+        }
+
+        .level-num {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--blue);
+            letter-spacing: 1px
+        }
+
+        .level-section.level-built .level-num {
+            color: var(--green)
+        }
+
+        .level-items-count {
+            font-size: .72rem;
+            color: var(--text2);
+            background: rgba(255, 255, 255, .05);
+            padding: 2px 8px;
+            border-radius: 99px
+        }
+
+        .level-status {
+            display: flex;
+            align-items: center;
+            gap: .5rem
+        }
+
+        .level-badge-built {
+            background: rgba(74, 222, 128, .15);
+            border: 1px solid rgba(74, 222, 128, .4);
+            color: var(--green);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: 1px
+        }
+
+        .level-badge-ready {
+            background: rgba(201, 168, 76, .12);
+            border: 1px solid rgba(201, 168, 76, .3);
+            color: var(--gold-l);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: 1px
+        }
+
+        .level-progress-mini {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .78rem;
+            color: var(--blue)
+        }
+
+        .level-section.level-built .level-progress-mini {
+            color: var(--green)
+        }
+
+        .level-chevron {
+            color: var(--text3);
+            transition: transform .2s;
+            font-size: 1.2rem
+        }
+
+        .level-chevron.open {
+            transform: rotate(90deg)
+        }
+
+        .level-body {
+            display: none;
+            padding: 0 1.2rem 1.2rem;
+            border-top: 1px solid var(--border)
+        }
+
+        .level-body.open {
+            display: block
+        }
+
+        /* ITEMS IN LEVELS */
+        .level-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: .75rem;
+            margin-top: 1rem
+        }
+
+        .litem-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all var(--tr);
+            position: relative
+        }
+
+        .litem-card:hover {
+            border-color: rgba(96, 165, 250, .35);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(96, 165, 250, .1)
+        }
+
+        .litem-card.litem-found {
+            border-color: rgba(74, 222, 128, .45);
+            background: linear-gradient(145deg, #131d18, var(--bg2));
+            box-shadow: 0 0 15px rgba(74, 222, 128, .15)
+        }
+
+        .litem-card.litem-found:hover {
+            border-color: rgba(74, 222, 128, .7)
+        }
+
+        .litem-img-wrap {
+            aspect-ratio: 1;
+            background: #0d1117;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative
+        }
+
+        .litem-img {
+            width: 75%;
+            height: 75%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            transition: filter var(--tr), transform var(--tr)
+        }
+
+        .litem-card:not(.litem-found) .litem-img {
+            filter: brightness(.6) saturate(.5)
+        }
+
+        .litem-card.litem-found .litem-img {
+            filter: brightness(1.1) saturate(1.2)
+        }
+
+        .litem-card:hover .litem-img {
+            transform: scale(1.07);
+            filter: brightness(1)
+        }
+
+        .litem-check {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--green-d);
+            border: 2px solid var(--green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(.5);
+            transition: all .25s cubic-bezier(.34, 1.56, .64, 1);
+            z-index: 5
+        }
+
+        .litem-card.litem-found .litem-check {
+            opacity: 1;
+            transform: scale(1)
+        }
+
+        .litem-check svg {
+            width: 11px;
+            height: 11px;
+            color: #fff
+        }
+
+        .litem-info {
+            padding: 7px 9px 9px
+        }
+
+        .litem-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2
+        }
+
+        .litem-card.litem-found .litem-name {
+            color: #d4f0e0
+        }
+
+        .litem-qty {
+            font-size: .68rem;
+            color: var(--text3);
+            margin-top: 2px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600
+        }
+
+        .litem-card.litem-found .litem-qty {
+            color: rgba(74, 222, 128, .6)
+        }
+
+        @keyframes scan-blue {
+            0% {
+                box-shadow: 0 0 0 0 rgba(96, 165, 250, .5)
+            }
+
+            70% {
+                box-shadow: 0 0 0 14px rgba(96, 165, 250, 0)
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(96, 165, 250, 0)
+            }
+        }
+
+        .pulse-blue {
+            animation: scan-blue .5s ease-out
+        }
+
+        /* MARK BUILT BUTTON */
+        .level-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+            padding-top: .75rem;
+            border-top: 1px solid var(--border)
+        }
+
+        .btn-mark-built {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: 1px solid;
+            text-transform: uppercase;
+            transition: all var(--tr)
+        }
+
+        .btn-mark-built.mark-done {
+            background: linear-gradient(135deg, rgba(74, 222, 128, .15), rgba(74, 222, 128, .08));
+            border-color: rgba(74, 222, 128, .4);
+            color: var(--green)
+        }
+
+        .btn-mark-built.mark-done:hover {
+            background: linear-gradient(135deg, rgba(74, 222, 128, .25), rgba(74, 222, 128, .15));
+            border-color: var(--green)
+        }
+
+        .btn-mark-built.mark-undo {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text3)
+        }
+
+        .btn-mark-built.mark-undo:hover {
+            border-color: var(--red);
+            color: var(--red)
+        }
+
+        /* TOAST */
+        #toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none
+        }
+
+        .toast {
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .88rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+            animation: toast-in .4s cubic-bezier(.34, 1.56, .64, 1) forwards
+        }
+
+        .toast.t-found {
+            background: rgba(22, 163, 74, .9);
+            border: 1px solid var(--green);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(74, 222, 128, .3)
+        }
+
+        .toast.t-unfound {
+            background: rgba(40, 30, 20, .92);
+            border: 1px solid rgba(201, 168, 76, .4);
+            color: var(--gold-l);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .4)
+        }
+
+        .toast.t-built {
+            background: rgba(37, 99, 235, .85);
+            border: 1px solid var(--blue);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(96, 165, 250, .25)
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(.9)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1)
+            }
+        }
+
+        /* BUTTONS */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            font-size: .82rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all var(--tr);
+            border: 1px solid;
+            text-transform: uppercase
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text2)
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--gold);
+            color: var(--gold-l);
+            background: rgba(201, 168, 76, .05)
+        }
+
+        /* Modal for quantity input */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .75);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 100%;
+            animation: modal-in .3s cubic-bezier(.34, 1.56, .64, 1);
+        }
+
+        @keyframes modal-in {
+            from {
+                opacity: 0;
+                transform: scale(.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--blue);
+            letter-spacing: 1px;
+            margin-bottom: .5rem;
+        }
+
+        .modal-subtitle {
+            font-size: .85rem;
+            color: var(--text2);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-label {
+            display: block;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text2);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: .5rem;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            text-align: center;
+            transition: all var(--tr);
+            outline: none;
+        }
+
+        .modal-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, .1);
+        }
+
+        .modal-quick-btns {
+            display: flex;
+            gap: .5rem;
+            margin-top: .75rem;
+        }
+
+        .modal-quick-btn {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--tr);
+        }
+
+        .modal-quick-btn:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(96, 165, 250, .05);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: .75rem;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: 1px solid;
+            text-transform: uppercase;
+            transition: all var(--tr);
+        }
+
+        .modal-btn-cancel {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text2);
+        }
+
+        .modal-btn-cancel:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .modal-btn-confirm {
+            background: linear-gradient(135deg, rgba(96, 165, 250, .18), rgba(96, 165, 250, .08));
+            border-color: rgba(96, 165, 250, .4);
+            color: var(--blue);
+        }
+
+        .modal-btn-confirm:hover {
+            background: linear-gradient(135deg, rgba(96, 165, 250, .28), rgba(96, 165, 250, .15));
+            border-color: var(--blue);
+        }
+
+        /* RESPONSIVE */
+        @media(max-width:768px) {
+            .module-cards {
+                grid-template-columns: 1fr;
+                max-width: 380px
+            }
+
+            .header-inner {
+                flex-wrap: wrap;
+                height: auto;
+                padding: .75rem 0;
+                gap: .6rem
+            }
+
+            .header-progress {
+                width: 100%;
+                max-width: none
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(3, 1fr)
+            }
+
+            #app-header {
+                padding: 0 1rem
+            }
+
+            .mod-page {
+                padding: 1rem
+            }
+        }
+
+        @media(max-width:480px) {
+            .home-title {
+                font-size: 2.5rem
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr
+            }
+
+            .toolbar {
+                flex-direction: column
+            }
+
+            .filter-tabs {
+                width: 100%
+            }
+
+            .filter-tab {
+                flex: 1;
+                text-align: center
+            }
+
+            .stations-grid {
+                grid-template-columns: 1fr 1fr
+            }
+		}
+		.module-icon-kappa {
+		  display: inline-block;
+		  width: 124px;          
+		  height: 124px;         
+
+		  background-image: url('images/kappa_icon.webp');
+		  background-size: contain; 
+		  background-repeat: no-repeat; 
+		  background-position: center;  
+		}
+		.module-icon-hidedout {
+		  display: inline-block;
+		  width: 124px;          
+		  height: 124px;         
+
+		  background-image: url('images/hideout_icon.png');
+		  background-size: contain; 
+		  background-repeat: no-repeat; 
+		  background-position: center;  
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════ HOME PAGE ═══════════════════════ -->
+    <div id="page-home" class="page active">
+        <div class="home-header">
+            <div class="home-eyebrow">Escape from Tarkov</div>
+            <div class="home-title">EFT TRACKER</div>
+            <div class="home-subtitle">Selecciona un módulo para continuar</div>
+        </div>
+        <div class="module-cards">
+            <div class="module-card kappa" id="card-kappa" onclick="navigate('kappa')">
+                <span class="module-icon-kappa"></span>
+                <div class="module-title">KAPPA</div>
+                <div class="module-desc">Rastrea los 39 items necesarios para completar la quest "The Collector" y
+                    conseguir el contenedor Kappa.</div>
+                <div class="module-mini-progress">
+                    <div class="mini-prog-label"><span>PROGRESO</span><span id="home-kappa-label">0 / ?</span></div>
+                    <div class="mini-prog-bar">
+                        <div class="mini-prog-fill" id="home-kappa-fill" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="module-card hideout" id="card-hideout" onclick="navigate('hideout')">
+                <span class="module-icon-hidedout"></span>
+                <div class="module-title">REFUGIO</div>
+                <div class="module-desc">Gestiona las construcciones de tu Refugio. Sigue el progreso de cada estación
+                    nivel por nivel.</div>
+                <div class="module-mini-progress">
+                    <div class="mini-prog-label"><span>NIVELES CONSTRUIDOS</span><span id="home-hideout-label">0 /
+                            ?</span></div>
+                    <div class="mini-prog-bar">
+                        <div class="mini-prog-fill" id="home-hideout-fill" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="home-version">tarkov.dev API — EFT Tracker v2.2</div>
+    </div>
+
+    <!-- ═══════════════════════ SHARED HEADER ═══════════════════════ -->
+    <header id="app-header">
+        <div class="header-inner">
+            <button class="btn-home" onclick="navigate('home')">← MENÚ</button>
+            <div class="logo-text" id="header-logo">EFT</div>
+            <div class="nav-tabs">
+                <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')"><img src="images/kappa_icon.webp" width="24" height="24" style="vertical-align: middle;">  KAPPA</button>
+                <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')"><img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> REFUGIO</button>
+            </div>
+            <div class="header-progress">
+                <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
+                        0</strong></div>
+                <div class="prog-bar-bg">
+                    <div class="prog-bar-fill" id="header-prog-fill" style="width:0%"></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:.5rem">
+                <button class="btn btn-ghost" id="btn-reload">↻</button>
+                <button class="btn btn-ghost" id="btn-reset">☐</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════ KAPPA PAGE ═══════════════════════ -->
+    <div id="page-kappa" class="page">
+        <div class="mod-page">
+            <div class="loading-screen" id="k-loading">
+                <div class="loader"></div>
+                <div class="loading-text">Cargando items de Kappa...</div>
+            </div>
+            <div class="error-screen" id="k-error" style="display:none">
+                <div style="font-size:2.5rem">⚠️</div>
+                <div class="error-text" id="k-error-msg"></div>
+                <button class="btn btn-ghost" onclick="loadKappa()" style="margin-top:1rem">Reintentar</button>
+            </div>
+            <div id="k-content" style="display:none">
+                <div class="complete-banner" id="k-banner" style="display:none">
+                    <div class="banner-icon">🏆</div>
+                    <div>
+                        <div class="banner-title">¡KAPPA COMPLETADO!</div>
+                        <div class="banner-sub">Has encontrado todos los items. ¡El Kappa es tuyo!</div>
+                    </div>
+                </div>
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-icon total">📦</div>
+                        <div>
+                            <div class="stat-number total" id="k-total">0</div>
+                            <div class="stat-label">Total Items</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon found">✅</div>
+                        <div>
+                            <div class="stat-number found" id="k-found">0</div>
+                            <div class="stat-label">Encontrados</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon remaining">⏳</div>
+                        <div>
+                            <div class="stat-number remaining" id="k-remaining">0</div>
+                            <div class="stat-label">Pendientes</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="k-search"
+                            placeholder="Buscar item..." /></div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">Todos</button>
+                        <button class="filter-tab found-tab" data-filter="found">Encontrados</button>
+                        <button class="filter-tab" data-filter="missing">Pendientes</button>
+                    </div>
+                </div>
+                <div class="section-header">
+                    <span class="section-title">Items Necesarios</span>
+                    <div class="section-line"></div>
+                    <span class="section-count" id="k-count">0 items</span>
+                </div>
+                <div class="items-grid" id="k-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════ HIDEOUT PAGE ═══════════════════════ -->
+    <div id="page-hideout" class="page">
+        <div class="mod-page">
+            <div class="loading-screen" id="h-loading">
+                <div class="loader blue-loader"></div>
+                <div class="loading-text">Cargando Refugio...</div>
+            </div>
+            <div class="error-screen" id="h-error" style="display:none">
+                <div style="font-size:2.5rem">⚠️</div>
+                <div class="error-text" id="h-error-msg"></div>
+                <button class="btn btn-ghost" onclick="loadHideout()" style="margin-top:1rem">Reintentar</button>
+            </div>
+            <div id="h-content" style="display:none">
+                
+                <!-- View Tabs -->
+                <div class="hideout-view-tabs">
+                    <button class="hideout-view-tab active" id="tab-stations" onclick="switchHideoutView('stations')">
+                        🏚️ Estaciones
+                    </button>
+                    <button class="hideout-view-tab" id="tab-items" onclick="switchHideoutView('items')">
+                        📦 Lista de Items
+                    </button>
+                </div>
+
+                <!-- Station Grid View -->
+                <div id="h-stations-view">
+                    <div class="stats-bar">
+                        <div class="stat-card">
+                            <div class="stat-icon total">🏚️</div>
+                            <div>
+                                <div class="stat-number total" id="h-total">0</div>
+                                <div class="stat-label">Total Niveles</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon built">🔨</div>
+                            <div>
+                                <div class="stat-number built" id="h-built">0</div>
+                                <div class="stat-label">Construidos</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon remaining">⏳</div>
+                            <div>
+                                <div class="stat-number remaining" id="h-remaining">0</div>
+                                <div class="stat-label">Pendientes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-header">
+                        <span class="section-title">Estaciones del Refugio</span>
+                        <div class="section-line"></div>
+                        <span class="section-count" id="h-stations-count">0 estaciones</span>
+                    </div>
+                    <div class="stations-grid" id="h-stations-grid"></div>
+                </div>
+
+                <!-- Items List View -->
+                <div id="h-items-view" style="display:none">
+                    <div class="stats-bar">
+                        <div class="stat-card">
+                            <div class="stat-icon total">📦</div>
+                            <div>
+                                <div class="stat-number total" id="hi-total">0</div>
+                                <div class="stat-label">Items Únicos</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon found">✅</div>
+                            <div>
+                                <div class="stat-number found" id="hi-found">0</div>
+                                <div class="stat-label">Completos</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon remaining">⏳</div>
+                            <div>
+                                <div class="stat-number remaining" id="hi-remaining">0</div>
+                                <div class="stat-label">Faltantes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="toolbar">
+                        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="hi-search"
+                                placeholder="Buscar item..." /></div>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-filter="all" id="hi-filter-all">Todos</button>
+                            <button class="filter-tab found-tab" data-filter="found" id="hi-filter-found">Completos</button>
+                            <button class="filter-tab" data-filter="missing" id="hi-filter-missing">Faltantes</button>
+                        </div>
+                    </div>
+                    <div class="section-header">
+                        <span class="section-title">Items del Refugio</span>
+                        <div class="section-line"></div>
+                        <span class="section-count" id="hi-count">0 items</span>
+                    </div>
+                    <div class="items-grid" id="h-items-grid"></div>
+                </div>
+
+                <!-- Station Detail View -->
+                <div id="h-detail-view" style="display:none">
+                    <button class="detail-back" onclick="showStationsView()">← Volver a Estaciones</button>
+                    <div class="detail-header">
+                        <span class="detail-station-icon" id="detail-icon"></span>
+                        <div>
+                            <div class="detail-station-name" id="detail-name"></div>
+                            <div class="detail-station-sub" id="detail-sub"></div>
+                        </div>
+                    </div>
+                    <div id="h-levels-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quantity Modal -->
+    <div class="modal-overlay" id="qty-modal">
+        <div class="modal-box">
+            <div class="modal-title" id="modal-item-name">Item</div>
+            <div class="modal-subtitle">¿Cuántas unidades tienes en tu inventario?</div>
+            <div class="modal-input-group">
+                <label class="modal-label">Cantidad (de <span id="modal-max-qty">0</span>)</label>
+                <input type="number" class="modal-input" id="modal-qty-input" min="0" value="0">
+                <div class="modal-quick-btns">
+                    <button class="modal-quick-btn" onclick="setModalQuantity(0)">0</button>
+                    <button class="modal-quick-btn" onclick="setModalQuantity('half')">Mitad</button>
+                    <button class="modal-quick-btn" onclick="setModalQuantity('max')">Todas</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeQuantityModal()">Cancelar</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmQuantityModal()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+
+</html>

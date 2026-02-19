@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>EFT Kappa Tracker - tarkov.dev</title>
+    <style>
+        :root { --bg: #0d0d0d; --card: #1a1a1a; --accent: #c4a15a; --text: #e0e0e0; --success: #2d4a2d; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 20px; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-width: 1200px; margin: 20px auto; }
+        .card { background: var(--card); border: 1px solid #333; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .card:hover { border-color: var(--accent); }
+        .card.obtained { background: var(--success); border-color: #4caf50; }
+        .card img { width: 100%; height: 100px; object-fit: contain; }
+        .name { font-size: 0.8rem; margin-top: 10px; font-weight: bold; }
+        #stats { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; }
+        .error-msg { color: #ff6b6b; background: #2a1010; padding: 20px; border-radius: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Kappa Collector Tracker</h1>
+    <div id="stats">Cargando ítems desde tarkov.dev...</div>
+    
+    <div id="api-error" class="error-msg">
+        <strong>Error de Conexión:</strong> El navegador bloqueó la petición a la API.<br>
+        <small>Tip: Intenta abrir este archivo con Firefox o usa un servidor local (como Live Server en VS Code).</small>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+<script>
+    // IDs de los 28 objetos que ya tienes en tu captura
+    const itemsOwnedInImage = [
+        "5d235b4f86f77443f07a5600", "5e4abd4186f77445564406f3", "5efb0da7a29a3510a65f8013", "5efb0e00f9136154563a923d",
+        "619b69493992381283281098", "5c070e1786f77439713e2531", "5efb0dbca29a3510a65f8014", "5efb0e0cf9136154563a923e",
+        "5efb0e68f9136154563a923f", "5c070e5686f77426833a5160", "5efb0e77a29a3510a65f8017", "5efb0e95a29a3510a65f8019",
+        "60da7f7e914a51138a4d7d96", "5c0e625a86f7742d1a15ed74", "5c0e154486f774400e26344e", "5c0e2f3986f7747d124bd302",
+        "5c0e1ed186f77421ed0f0980", "619b699276d97e3f28249822", "5c0e334a86f7740e5318ef25", "62a0953154859a09945c71a3",
+        "5c06f37886f774288d363765", "5c06f40786f7742a004bc236", "62a09545f940344f6d4d1279", "5e4c414686f77420e62b4737",
+        "60db2969914a51138a4d7db3", "5efb0e45f9136154563a923c", "5efb0df9a29a3510a65f8016", "619b69d0399238128328109a"
+    ];
+
+    let saved = JSON.parse(localStorage.getItem('kappa_v3')) || {};
+
+    async function init() {
+        const query = `{ task(id: "5d2495a886f77425cd512ed8") { objectives { ... on TaskObjectiveItem { item { id name image512pxLink } } } } }`;
+        
+        try {
+            const res = await fetch('https://api.tarkov.dev/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const json = await res.json();
+            render(json.data.task.objectives.map(o => o.item));
+        } catch (e) {
+            document.getElementById('api-error').style.display = 'block';
+            document.getElementById('stats').innerText = "Error de carga";
+        }
+    }
+
+    function render(items) {
+        const grid = document.getElementById('grid');
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const isObtained = saved[item.id] !== undefined ? saved[item.id] : itemsOwnedInImage.includes(item.id);
+            if (isObtained) card.classList.add('obtained');
+
+            card.innerHTML = `<img src="${item.image512pxLink}"><div class="name">${item.name}</div>`;
+            card.onclick = () => {
+                const now = card.classList.toggle('obtained');
+                saved[item.id] = now;
+                localStorage.setItem('kappa_v3', JSON.stringify(saved));
+                updateStats();
+            };
+            grid.appendChild(card);
+        });
+        updateStats();
+    }
+
+    function updateStats() {
+        const total = document.querySelectorAll('.card').length;
+        const count = document.querySelectorAll('.card.obtained').length;
+        document.getElementById('stats').innerText = `Kappa: ${count} / ${total} (${Math.round(count/total*100)}%)`;
+    }
+
+    init();
+</script>
+</body>
+</html>
