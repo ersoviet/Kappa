@@ -11,6 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
         rel="stylesheet" />
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
     <style>
         :root {
             --bg: #0a0c0f;
@@ -2151,6 +2152,203 @@
         .readonly-banner .readonly-user {
             font-weight: 700;
         }
+
+        /* SCANNER STYLES */
+        .btn-scanner {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--gold);
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--tr);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .btn-scanner:hover {
+            border-color: var(--gold);
+            background: rgba(201, 168, 76, .1);
+            transform: scale(1.05);
+        }
+
+        .scanner-modal {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+        }
+
+        .scanner-modal.active {
+            display: flex;
+        }
+
+        .scanner-viewport {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #scanner-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .scanner-frame {
+            width: 80%;
+            height: 120px;
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+            background: rgba(201, 168, 76, 0.05);
+        }
+
+        .scanner-laser {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gold);
+            box-shadow: 0 0 15px var(--gold);
+            animation: scanLine 2s linear infinite;
+        }
+
+        @keyframes scanLine {
+            0% {
+                top: 0;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .scanner-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--gold);
+        }
+
+        .top-left {
+            top: -2px;
+            left: -2px;
+            border-right: 0;
+            border-bottom: 0;
+            border-top-left-radius: 8px;
+        }
+
+        .top-right {
+            top: -2px;
+            right: -2px;
+            border-left: 0;
+            border-bottom: 0;
+            border-top-right-radius: 8px;
+        }
+
+        .bot-left {
+            bottom: -2px;
+            left: -2px;
+            border-right: 0;
+            border-top: 0;
+            border-bottom-left-radius: 8px;
+        }
+
+        .bot-right {
+            bottom: -2px;
+            right: -2px;
+            border-left: 0;
+            border-top: 0;
+            border-bottom-right-radius: 8px;
+        }
+
+        .scanner-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 12, 15, 0.9);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .scanner-footer {
+            padding: 1.5rem;
+            background: rgba(10, 12, 15, 0.9);
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .scanner-status {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text2);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .scanner-match {
+            color: var(--gold);
+            font-weight: 700;
+            min-height: 1.2rem;
+        }
+
+        .btn-scanner-close {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 30px;
+            border-radius: 99px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .scanner-log {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            display: none;
+        }
     </style>
 </head>
 
@@ -2283,8 +2481,11 @@
                     </div>
                 </div>
                 <div class="toolbar">
-                    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="k-search"
-                            placeholder="Buscar item..." /></div>
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="k-search" placeholder="Buscar item..." />
+                    </div>
+                    <button class="btn-scanner" onclick="startScanner('kappa')" title="Escanear con cámara">📷</button>
                     <div class="filter-tabs">
                         <button class="filter-tab active" data-filter="all">Todos</button>
                         <button class="filter-tab found-tab" data-filter="found">Encontrados</button>
@@ -2384,8 +2585,12 @@
                         </div>
                     </div>
                     <div class="toolbar">
-                        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="hi-search"
-                                placeholder="Buscar item..." /></div>
+                        <div class="search-box">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="hi-search" placeholder="Buscar item..." />
+                        </div>
+                        <button class="btn-scanner" onclick="startScanner('hideout')"
+                            title="Escanear con cámara">📷</button>
                         <div class="filter-tabs">
                             <button class="filter-tab active" data-filter="all" id="hi-filter-all">Todos</button>
                             <button class="filter-tab found-tab" data-filter="found"
@@ -2485,6 +2690,37 @@
                 <button class="btn-auth" onclick="closeAuthModal()" style="font-size:.75rem">✕ CERRAR</button>
             </div>
         </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div class="scanner-modal" id="scanner-modal">
+        <div class="scanner-header">
+            <div class="logo-text">SCANNER</div>
+            <div id="scanner-type-label" style="font-size:0.7rem; color:var(--text3); letter-spacing:1px;">MODO: KAPPA
+            </div>
+        </div>
+        <div class="scanner-viewport">
+            <video id="scanner-video" autoplay playsinline muted></video>
+            <div class="scanner-overlay">
+                <div class="scanner-frame">
+                    <div class="scanner-corner top-left"></div>
+                    <div class="scanner-corner top-right"></div>
+                    <div class="scanner-corner bot-left"></div>
+                    <div class="scanner-corner bot-right"></div>
+                    <div class="scanner-laser"></div>
+                </div>
+            </div>
+            <div class="scanner-log" id="scanner-log"></div>
+        </div>
+        <div class="scanner-footer">
+            <div class="scanner-status" id="scanner-status">Preparando cámara...</div>
+            <div class="scanner-match" id="scanner-match-name">Enfoca el nombre del item</div>
+            <div style="margin-top:1.5rem">
+                <button class="btn-scanner-close" onclick="stopScanner()">CERRAR ESCÁNER</button>
+            </div>
+        </div>
+        <!-- Hidden canvas for OCR -->
+        <canvas id="scanner-canvas" style="display:none"></canvas>
     </div>
 
     <div id="toast-container"></div>

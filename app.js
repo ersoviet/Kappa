@@ -1016,6 +1016,180 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   updateHomeMini();
 });
 
+// ═══════════════════════════════════════════════════
+// OCR SCANNER MODULE
+// ═══════════════════════════════════════════════════
+let scannerActive = false;
+let scannerMode = 'kappa'; // 'kappa' | 'hideout'
+let scannerStream = null;
+let tesseractWorker = null;
+let scannerProcessing = false;
+let scannerCooldown = 0;
+
+async function initTesseract() {
+  if (tesseractWorker) return;
+  document.getElementById('scanner-status').textContent = 'Iniciando motor OCR...';
+  tesseractWorker = await Tesseract.createWorker();
+  await tesseractWorker.loadLanguage('eng');
+  await tesseractWorker.initialize('eng');
+  // Parametrizar para nombres de items (whitelist o similar si fuera necesario)
+}
+
+async function startScanner(mode) {
+  if (isReadOnly) { toast('Solo lectura — cambia a tu perfil para escanear', 't-unfound'); return; }
+  scannerMode = mode;
+  scannerActive = true;
+  document.getElementById('scanner-modal').classList.add('active');
+  document.getElementById('scanner-type-label').textContent = `MODO: ${mode.toUpperCase()}`;
+  document.getElementById('scanner-match-name').textContent = 'Enfoca el nombre del item';
+  document.getElementById('scanner-status').textContent = 'Iniciando cámara...';
+
+  try {
+    const constraints = {
+      video: {
+        facingMode: 'environment', // Usar cámara trasera
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    };
+    scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const video = document.getElementById('scanner-video');
+    video.srcObject = scannerStream;
+
+    await initTesseract();
+    document.getElementById('scanner-status').textContent = 'Escaneando en tiempo real...';
+    requestAnimationFrame(scannerLoop);
+  } catch (err) {
+    console.error('Error cámara:', err);
+    document.getElementById('scanner-status').textContent = 'Error: No se pudo acceder a la cámara';
+    toast('Error al abrir la cámara', 't-unfound');
+  }
+}
+
+function stopScanner() {
+  scannerActive = false;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(track => track.stop());
+    scannerStream = null;
+  }
+  document.getElementById('scanner-modal').classList.remove('active');
+}
+
+async function scannerLoop() {
+  if (!scannerActive) return;
+
+  if (scannerCooldown > 0) {
+    scannerCooldown--;
+    requestAnimationFrame(scannerLoop);
+    return;
+  }
+
+  if (!scannerProcessing) {
+    await processFrame();
+  }
+
+  requestAnimationFrame(scannerLoop);
+}
+
+async function processFrame() {
+  const video = document.getElementById('scanner-video');
+  const canvas = document.getElementById('scanner-canvas');
+  if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+  scannerProcessing = true;
+
+  // Configurar canvas para captura (recorte central)
+  const ctx = canvas.getContext('2d');
+  const dpr = 1.5; // Escalar un poco para mejor precisión
+
+  // Definir área de interés (el frame visual)
+  const frameWidth = video.videoWidth * 0.8;
+  const frameHeight = 120 * (video.videoHeight / video.offsetHeight);
+  const startX = (video.videoWidth - frameWidth) / 2;
+  const startY = (video.videoHeight - frameHeight) / 2;
+
+  canvas.width = frameWidth * dpr;
+  canvas.height = frameHeight * dpr;
+
+  ctx.drawImage(video, startX, startY, frameWidth, frameHeight, 0, 0, canvas.width, canvas.height);
+
+  try {
+    const { data: { text } } = await tesseractWorker.recognize(canvas);
+    const cleanText = text.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+    if (cleanText.length > 3) {
+      matchAndMark(cleanText);
+    }
+  } catch (e) {
+    console.warn('OCR Error:', e);
+  }
+
+  scannerProcessing = false;
+}
+
+function matchAndMark(text) {
+  const candidates = scannerMode === 'kappa' ? kappaItems : consolidatedHideoutItems;
+  let bestMatch = null;
+  let bestScore = 0;
+
+  candidates.forEach(item => {
+    const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+    // Búsqueda simple de subcadena o similitud
+    if (text.includes(itemName) || itemName.includes(text)) {
+      const score = Math.max(text.length / itemName.length, itemName.length / text.length);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = item;
+      }
+    }
+  });
+
+  if (bestMatch && bestScore > 0.4) {
+    const display = document.getElementById('scanner-match-name');
+    display.textContent = `DETECTADO: ${bestMatch.name}`;
+
+    // Si la coincidencia es muy alta, marcar automáticamente
+    if (bestScore > 0.7) {
+      if (scannerMode === 'kappa') {
+        if (!kappaFound.has(bestMatch.id)) {
+          toggleKappa(bestMatch.id);
+          scannerCooldown = 60; // Pausa para feedback
+          visualFeedback(true);
+        }
+      } else {
+        const status = getItemStatus(bestMatch);
+        if (status !== 'complete') {
+          // Para el refugio, abrimos el modal de cantidad o incrementamos 1
+          // Por simplicidad en móvil, incrementamos +1 o marcamos como completo
+          markHideoutItemAuto(bestMatch);
+          scannerCooldown = 60;
+          visualFeedback(true);
+        }
+      }
+    }
+  }
+}
+
+function markHideoutItemAuto(item) {
+  const current = getInventoryQty(item.id);
+  const next = Math.min(item.totalCount, current + 1);
+  hideoutItemsInventory[item.id] = next;
+  saveHideoutInventory();
+  renderHideoutItemsView();
+  toast(`+1 ${item.shortName || item.name} (Escaneado)`, 't-built');
+}
+
+function visualFeedback(success) {
+  const frame = document.querySelector('.scanner-frame');
+  frame.style.borderColor = success ? 'var(--green)' : 'var(--red)';
+  frame.style.boxShadow = success ? '0 0 30px var(--green)' : '0 0 30px var(--red)';
+  setTimeout(() => {
+    frame.style.borderColor = '';
+    frame.style.boxShadow = '';
+  }, 1000);
+}
+
 // ═══════ INIT ═══════
 async function initApp() {
   // Load local data first
@@ -1047,6 +1221,7 @@ async function initApp() {
     await loadAllProfiles();
   } catch (e) {
     console.warn('Could not load profiles:', e);
+    allProfiles = [];
   }
 
   updateAuthUI();
