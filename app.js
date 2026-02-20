@@ -104,14 +104,36 @@ function syncProfileToServer() {
 
 // ═══════ AUTH FUNCTIONS ═══════
 function openAuthModal() {
-  document.getElementById('auth-modal').classList.add('active');
+  const modal = document.getElementById('auth-modal');
+  modal.classList.add('active');
   document.getElementById('login-error').textContent = '';
   document.getElementById('register-error').textContent = '';
-  document.getElementById('login-username').value = '';
+
+  // Limpiar campos
   document.getElementById('login-password').value = '';
   document.getElementById('register-username').value = '';
   document.getElementById('register-password').value = '';
   document.getElementById('register-password2').value = '';
+
+  // Lógica de pre-rellenado de perfil
+  const userFieldContainer = document.getElementById('login-username').parentElement;
+  const usernameInput = document.getElementById('login-username');
+
+  // Intentar obtener el usuario del perfil que se está viendo
+  const selectedProfile = allProfiles.find(p => p.id == viewingProfileId);
+
+  if (selectedProfile && !currentUser) {
+    usernameInput.value = selectedProfile.username;
+    userFieldContainer.style.display = 'none'; // ocultar campo de usuario
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = `Iniciando sesión como ${selectedProfile.username}`;
+    document.getElementById('login-password').focus();
+  } else {
+    usernameInput.value = '';
+    userFieldContainer.style.display = 'block'; // mostrar campo de usuario
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Inicia sesión o crea una cuenta para guardar tu progreso';
+    usernameInput.focus();
+  }
+
   switchAuthTab('login');
 }
 function closeAuthModal() {
@@ -122,6 +144,19 @@ function switchAuthTab(tab) {
   document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
   document.getElementById('auth-form-login').style.display = tab === 'login' ? 'block' : 'none';
   document.getElementById('auth-form-register').style.display = tab === 'register' ? 'block' : 'none';
+
+  // Si volvemos a login y hay perfil, ocultar usuario, si vamos a registro siempre mostrar
+  const userFieldContainer = document.getElementById('login-username').parentElement;
+  if (tab === 'register') {
+    userFieldContainer.style.display = 'block';
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Crea una cuenta nueva para guardar tu progreso';
+  } else {
+    const selectedProfile = allProfiles.find(p => p.id == viewingProfileId);
+    if (selectedProfile && !currentUser) {
+      userFieldContainer.style.display = 'none';
+      document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = `Iniciando sesión como ${selectedProfile.username}`;
+    }
+  }
 }
 
 async function doLogin() {
