@@ -115,47 +115,56 @@ function openAuthModal() {
   document.getElementById('register-password').value = '';
   document.getElementById('register-password2').value = '';
 
-  // Lógica de pre-rellenado de perfil
+  updateLoginFieldVisibility();
+  switchAuthTab('login');
+}
+
+function updateLoginFieldVisibility() {
   const userFieldContainer = document.getElementById('login-username').parentElement;
   const usernameInput = document.getElementById('login-username');
+  const modalSub = document.getElementById('auth-modal').querySelector('.auth-modal-sub');
 
-  // Intentar obtener el usuario del perfil que se está viendo
+  // Intentar obtener el usuario del perfil seleccionado
   const selectedProfile = allProfiles.find(p => p.id == viewingProfileId);
 
   if (selectedProfile && !currentUser) {
     usernameInput.value = selectedProfile.username;
     userFieldContainer.style.display = 'none'; // ocultar campo de usuario
-    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = `Iniciando sesión como ${selectedProfile.username}`;
-    document.getElementById('login-password').focus();
+    modalSub.innerHTML = `Iniciando sesión como <strong>${selectedProfile.username}</strong> <br> <a href="#" onclick="showUsernameField(); return false;" style="color:var(--gold); font-size:0.8rem; text-decoration:underline; margin-top:5px; display:inline-block;">¿No eres tú? Cambiar usuario</a>`;
+    setTimeout(() => document.getElementById('login-password').focus(), 50);
   } else {
     usernameInput.value = '';
     userFieldContainer.style.display = 'block'; // mostrar campo de usuario
-    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Inicia sesión o crea una cuenta para guardar tu progreso';
-    usernameInput.focus();
+    modalSub.textContent = 'Inicia sesión o crea una cuenta para guardar tu progreso';
+    setTimeout(() => usernameInput.focus(), 50);
   }
-
-  switchAuthTab('login');
 }
+
+function showUsernameField() {
+  const userFieldContainer = document.getElementById('login-username').parentElement;
+  const usernameInput = document.getElementById('login-username');
+  const modalSub = document.getElementById('auth-modal').querySelector('.auth-modal-sub');
+
+  usernameInput.value = '';
+  userFieldContainer.style.display = 'block';
+  modalSub.textContent = 'Inicia sesión con otra cuenta';
+  usernameInput.focus();
+}
+
 function closeAuthModal() {
   document.getElementById('auth-modal').classList.remove('active');
 }
+
 function switchAuthTab(tab) {
   document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
   document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
   document.getElementById('auth-form-login').style.display = tab === 'login' ? 'block' : 'none';
   document.getElementById('auth-form-register').style.display = tab === 'register' ? 'block' : 'none';
 
-  // Si volvemos a login y hay perfil, ocultar usuario, si vamos a registro siempre mostrar
-  const userFieldContainer = document.getElementById('login-username').parentElement;
-  if (tab === 'register') {
-    userFieldContainer.style.display = 'block';
-    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Crea una cuenta nueva para guardar tu progreso';
+  if (tab === 'login') {
+    updateLoginFieldVisibility();
   } else {
-    const selectedProfile = allProfiles.find(p => p.id == viewingProfileId);
-    if (selectedProfile && !currentUser) {
-      userFieldContainer.style.display = 'none';
-      document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = `Iniciando sesión como ${selectedProfile.username}`;
-    }
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Crea una cuenta nueva para guardar tu progreso';
   }
 }
 
