@@ -8,6 +8,33 @@ const KAPPA_STORAGE = 'kappa_tracker_v2';
 const HIDEOUT_STORAGE = 'hideout_tracker_v1';
 const HIDEOUT_INVENTORY_STORAGE = 'hideout_inventory_v2';
 
+// ═══════ API CACHE ═══════
+async function fetchWithCache(query, cacheKey, ttlHours = 24) {
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Date.now() - parsed.timestamp < ttlHours * 60 * 60 * 1000) {
+        return parsed.data;
+      }
+    } catch (e) { }
+  }
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.errors) throw new Error(data.errors[0].message);
+
+  localStorage.setItem(cacheKey, JSON.stringify({
+    timestamp: Date.now(),
+    data: data.data
+  }));
+  return data.data;
+}
+
 // SVG checkmark
 const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
@@ -485,11 +512,8 @@ async function loadKappa() {
   document.getElementById('k-error').style.display = 'none';
   document.getElementById('k-content').style.display = 'none';
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: KAPPA_QUERY }) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-    const tasks = data.data.tasks;
+    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa');
+    const tasks = data.tasks;
     let collector = tasks.find(t => t.name === 'The Collector');
     if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
     const seen = new Set();
@@ -597,11 +621,8 @@ async function loadHideout() {
   document.getElementById('h-error').style.display = 'none';
   document.getElementById('h-content').style.display = 'none';
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: HIDEOUT_QUERY }) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-    hideoutStations = data.data.hideoutStations
+    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout');
+    hideoutStations = data.hideoutStations
       .filter(s => s.levels && s.levels.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
 
