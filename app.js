@@ -148,6 +148,8 @@ async function doLogin() {
     if (!res.ok) throw new Error(data.error || 'Error de login');
     authToken = data.token;
     currentUser = data.user;
+    viewingProfileId = currentUser.id;  // ← fijar perfil propio
+    isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
     toast(`¡Bienvenido, ${currentUser.username}!`, 't-found');
@@ -189,6 +191,8 @@ async function doRegister() {
     if (!res.ok) throw new Error(data.error || 'Error de registro');
     authToken = data.token;
     currentUser = data.user;
+    viewingProfileId = currentUser.id;  // ← fijar perfil propio
+    isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
     toast(`Cuenta creada. ¡Bienvenido, ${currentUser.username}!`, 't-found');
@@ -290,8 +294,8 @@ async function switchProfile(profileId) {
   profileId = parseInt(profileId);
   viewingProfileId = profileId;
 
-  // Determine if read-only
-  isReadOnly = !(currentUser && currentUser.id === profileId);
+  // Determine if read-only (usar == para evitar problemas de tipo numérico vs string)
+  isReadOnly = !(currentUser && currentUser.id == profileId);
 
   // Load that profile's data
   const profile = allProfiles.find(p => p.id === profileId);
