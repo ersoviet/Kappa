@@ -270,11 +270,11 @@ app.get('*', (req, res) => {
 // ═══════ START SERVER ═══════
 async function start() {
     await initDB();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
         console.log('');
         console.log('  ╔═══════════════════════════════════════╗');
         console.log(`  ║   EFT Tracker Server running          ║`);
-        console.log(`  ║   http://localhost:${PORT}               ║`);
+        console.log(`  ║   http://0.0.0.0:${PORT}               ║`);
         console.log('  ╚═══════════════════════════════════════╝');
         console.log('');
     });
