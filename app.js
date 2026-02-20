@@ -291,11 +291,13 @@ function updateProfileSelectors() {
 
 async function switchProfile(profileId) {
   if (!profileId) return;
-  profileId = parseInt(profileId);
+  profileId = parseInt(profileId, 10);
   viewingProfileId = profileId;
 
-  // Determine if read-only (usar == para evitar problemas de tipo numérico vs string)
-  isReadOnly = !(currentUser && currentUser.id == profileId);
+  // Determinar si es solo lectura comparando como números
+  const myId = currentUser ? parseInt(currentUser.id, 10) : null;
+  isReadOnly = !(myId !== null && myId === profileId);
+  console.log('[switchProfile] profileId:', profileId, 'myId:', myId, 'isReadOnly:', isReadOnly);
 
   // Load that profile's data
   const profile = allProfiles.find(p => p.id === profileId);
