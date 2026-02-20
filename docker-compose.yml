@@ -11,7 +11,7 @@ services:
       - PORT=3000
       - NODE_ENV=production
       # IMPORTANTE: Cambia este valor por una clave secreta fuerte y aleatoria
-      - JWT_SECRET=CAMBIA_ESTO_POR_UNA_CLAVE_SECRETA_MUY_LARGA_Y_ALEATORIA
+      - JWT_SECRET=2dYGxJg!WYVhL!7kg!k*TYyc^bqep@zP376F6SeoSkca!BgAi6
     volumes:
       # Persistencia de la base de datos (el .db se guarda fuera del contenedor)
       - ./eft_tracker.db:/app/eft_tracker.db
