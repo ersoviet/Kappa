@@ -107,52 +107,65 @@ function authenticateToken(req, res, next) {
 
 // Register
 app.post('/api/register', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+        }
+        if (username.length < 2 || username.length > 30) {
+            return res.status(400).json({ error: 'El usuario debe tener entre 2 y 30 caracteres' });
+        }
+        if (password.length < 4) {
+            return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+        }
+
+        // Check if user exists
+        const existing = getRow('SELECT id FROM users WHERE username = ?', [username]);
+        if (existing) {
+            return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });
+        }
+
+        const hash = bcrypt.hashSync(password, 10);
+        db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
+
+        // Get the last inserted ID
+        const userResult = getRow('SELECT last_insert_rowid() as id');
+        if (!userResult || !userResult.id) {
+            throw new Error('No se pudo obtener el ID del usuario creado');
+        }
+        const userId = userResult.id;
+
+        // Create empty profile
+        db.run('INSERT INTO profiles (user_id) VALUES (?)', [userId]);
+        saveDB();
+
+        const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, user: { id: userId, username } });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ error: 'Error interno del servidor: ' + err.message });
     }
-    if (username.length < 2 || username.length > 30) {
-        return res.status(400).json({ error: 'El usuario debe tener entre 2 y 30 caracteres' });
-    }
-    if (password.length < 4) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
-    }
-
-    // Check if user exists
-    const existing = getRow('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing) {
-        return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });
-    }
-
-    const hash = bcrypt.hashSync(password, 10);
-    db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
-
-    // Get the last inserted ID
-    const user = getRow('SELECT last_insert_rowid() as id');
-    const userId = user.id;
-
-    // Create empty profile
-    db.run('INSERT INTO profiles (user_id) VALUES (?)', [userId]);
-    saveDB();
-
-    const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: userId, username } });
 });
 
 // Login
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
-    }
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+        }
 
-    const user = getRow('SELECT * FROM users WHERE username = ?', [username]);
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-        return res.status(401).json({ error: 'Credenciales incorrectas' });
-    }
+        const user = getRow('SELECT * FROM users WHERE username = ?', [username]);
+        if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+            return res.status(401).json({ error: 'Credenciales incorrectas' });
+        }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user.id, username: user.username } });
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, user: { id: user.id, username: user.username } });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
 // ═══════ PROFILE ROUTES ═══════
@@ -205,34 +218,39 @@ app.get('/api/profiles/:id', (req, res) => {
 
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
-    const { kappa_found, hideout_built, hideout_inventory } = req.body;
+    try {
+        const { kappa_found, hideout_built, hideout_inventory } = req.body;
 
-    const sets = [];
-    const params = [];
+        const sets = [];
+        const params = [];
 
-    if (kappa_found !== undefined) {
-        sets.push('kappa_found = ?');
-        params.push(JSON.stringify(kappa_found));
+        if (kappa_found !== undefined) {
+            sets.push('kappa_found = ?');
+            params.push(JSON.stringify(kappa_found));
+        }
+        if (hideout_built !== undefined) {
+            sets.push('hideout_built = ?');
+            params.push(JSON.stringify(hideout_built));
+        }
+        if (hideout_inventory !== undefined) {
+            sets.push('hideout_inventory = ?');
+            params.push(JSON.stringify(hideout_inventory));
+        }
+
+        if (sets.length === 0) {
+            return res.status(400).json({ error: 'No hay datos para actualizar' });
+        }
+
+        sets.push("updated_at = datetime('now')");
+        params.push(req.user.id);
+
+        db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
+        saveDB();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({ error: 'Error al actualizar el perfil' });
     }
-    if (hideout_built !== undefined) {
-        sets.push('hideout_built = ?');
-        params.push(JSON.stringify(hideout_built));
-    }
-    if (hideout_inventory !== undefined) {
-        sets.push('hideout_inventory = ?');
-        params.push(JSON.stringify(hideout_inventory));
-    }
-
-    if (sets.length === 0) {
-        return res.status(400).json({ error: 'No hay datos para actualizar' });
-    }
-
-    sets.push("updated_at = datetime('now')");
-    params.push(req.user.id);
-
-    db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
-    saveDB();
-    res.json({ success: true });
 });
 
 // Get current user info

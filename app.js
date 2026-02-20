@@ -136,7 +136,15 @@ async function doLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      throw e;
+    }
+
     if (!res.ok) throw new Error(data.error || 'Error de login');
     authToken = data.token;
     currentUser = data.user;
@@ -169,7 +177,15 @@ async function doRegister() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      throw e;
+    }
+
     if (!res.ok) throw new Error(data.error || 'Error de registro');
     authToken = data.token;
     currentUser = data.user;
