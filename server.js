@@ -17,7 +17,7 @@ const DB_PATH = path.join(__dirname, 'eft_tracker.db');
 
 // ═══════ MIDDLEWARE ═══════
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
 
 // ═══════ DATABASE SETUP ═══════
 let db;
@@ -261,7 +261,9 @@ app.get('/api/me', authenticateToken, (req, res) => {
 });
 
 // ═══════ SERVE FRONTEND ═══════
-app.get('/', (req, res) => {
+app.use(express.static(path.join(__dirname)));
+
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
