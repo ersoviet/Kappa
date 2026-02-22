@@ -17,7 +17,7 @@ const DB_PATH = path.join(__dirname, 'eft_tracker.db');
 
 // ═══════ MIDDLEWARE ═══════
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
 
 // ═══════ DATABASE SETUP ═══════
 let db;
@@ -110,52 +110,65 @@ function authenticateToken(req, res, next) {
 
 // Register
 app.post('/api/register', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+        }
+        if (username.length < 2 || username.length > 30) {
+            return res.status(400).json({ error: 'El usuario debe tener entre 2 y 30 caracteres' });
+        }
+        if (password.length < 4) {
+            return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+        }
+
+        // Check if user exists
+        const existing = getRow('SELECT id FROM users WHERE username = ?', [username]);
+        if (existing) {
+            return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });
+        }
+
+        const hash = bcrypt.hashSync(password, 10);
+        db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
+
+        // Get the last inserted ID
+        const userResult = getRow('SELECT last_insert_rowid() as id');
+        if (!userResult || !userResult.id) {
+            throw new Error('No se pudo obtener el ID del usuario creado');
+        }
+        const userId = userResult.id;
+
+        // Create empty profile
+        db.run('INSERT INTO profiles (user_id) VALUES (?)', [userId]);
+        saveDB();
+
+        const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, user: { id: userId, username } });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ error: 'Error interno del servidor: ' + err.message });
     }
-    if (username.length < 2 || username.length > 30) {
-        return res.status(400).json({ error: 'El usuario debe tener entre 2 y 30 caracteres' });
-    }
-    if (password.length < 4) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
-    }
-
-    // Check if user exists
-    const existing = getRow('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing) {
-        return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });
-    }
-
-    const hash = bcrypt.hashSync(password, 10);
-    db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, hash]);
-
-    // Get the last inserted ID
-    const user = getRow('SELECT last_insert_rowid() as id');
-    const userId = user.id;
-
-    // Create empty profile
-    db.run('INSERT INTO profiles (user_id) VALUES (?)', [userId]);
-    saveDB();
-
-    const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: userId, username } });
 });
 
 // Login
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
-    }
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+        }
 
-    const user = getRow('SELECT * FROM users WHERE username = ?', [username]);
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-        return res.status(401).json({ error: 'Credenciales incorrectas' });
-    }
+        const user = getRow('SELECT * FROM users WHERE username = ?', [username]);
+        if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+            return res.status(401).json({ error: 'Credenciales incorrectas' });
+        }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user.id, username: user.username } });
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token, user: { id: user.id, username: user.username } });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
 // ═══════ PROFILE ROUTES ═══════
@@ -214,15 +227,44 @@ app.get('/api/profiles/:id', (req, res) => {
 
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
+<<<<<<< HEAD
     const { kappa_found, hideout_built, hideout_inventory, quests_completed, player_level, target_quest_id } = req.body;
+=======
+    try {
+        const { kappa_found, hideout_built, hideout_inventory } = req.body;
+>>>>>>> b2ff43e2091eb0b0854aeee43c65a646ae20bc99
 
-    const sets = [];
-    const params = [];
+        const sets = [];
+        const params = [];
 
-    if (kappa_found !== undefined) {
-        sets.push('kappa_found = ?');
-        params.push(JSON.stringify(kappa_found));
+        if (kappa_found !== undefined) {
+            sets.push('kappa_found = ?');
+            params.push(JSON.stringify(kappa_found));
+        }
+        if (hideout_built !== undefined) {
+            sets.push('hideout_built = ?');
+            params.push(JSON.stringify(hideout_built));
+        }
+        if (hideout_inventory !== undefined) {
+            sets.push('hideout_inventory = ?');
+            params.push(JSON.stringify(hideout_inventory));
+        }
+
+        if (sets.length === 0) {
+            return res.status(400).json({ error: 'No hay datos para actualizar' });
+        }
+
+        sets.push("updated_at = datetime('now')");
+        params.push(req.user.id);
+
+        db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
+        saveDB();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({ error: 'Error al actualizar el perfil' });
     }
+<<<<<<< HEAD
     if (hideout_built !== undefined) {
         sets.push('hideout_built = ?');
         params.push(JSON.stringify(hideout_built));
@@ -254,6 +296,8 @@ app.put('/api/profile', authenticateToken, (req, res) => {
     db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
     saveDB();
     res.json({ success: true });
+=======
+>>>>>>> b2ff43e2091eb0b0854aeee43c65a646ae20bc99
 });
 
 // Get current user info
@@ -264,18 +308,20 @@ app.get('/api/me', authenticateToken, (req, res) => {
 });
 
 // ═══════ SERVE FRONTEND ═══════
-app.get('/', (req, res) => {
+app.use(express.static(path.join(__dirname)));
+
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // ═══════ START SERVER ═══════
 async function start() {
     await initDB();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
         console.log('');
         console.log('  ╔═══════════════════════════════════════╗');
         console.log(`  ║   EFT Tracker Server running          ║`);
-        console.log(`  ║   http://localhost:${PORT}               ║`);
+        console.log(`  ║   http://0.0.0.0:${PORT}               ║`);
         console.log('  ╚═══════════════════════════════════════╝');
         console.log('');
     });

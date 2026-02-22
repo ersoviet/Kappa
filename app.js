@@ -15,6 +15,33 @@ const setTxt = (id, txt) => { const el = getEl(id); if (el) el.textContent = txt
 const setHtml = (id, html) => { const el = getEl(id); if (el) el.innerHTML = html; };
 const setDisp = (id, s) => { const el = getEl(id); if (el) el.style.display = s; };
 
+// ═══════ API CACHE ═══════
+async function fetchWithCache(query, cacheKey, ttlHours = 24) {
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Date.now() - parsed.timestamp < ttlHours * 60 * 60 * 1000) {
+        return parsed.data;
+      }
+    } catch (e) { }
+  }
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.errors) throw new Error(data.errors[0].message);
+
+  localStorage.setItem(cacheKey, JSON.stringify({
+    timestamp: Date.now(),
+    data: data.data
+  }));
+  return data.data;
+}
+
 // SVG checkmark
 const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
@@ -152,24 +179,68 @@ function syncProfileToServer() {
 
 // ═══════ AUTH FUNCTIONS ═══════
 function openAuthModal() {
-  document.getElementById('auth-modal').classList.add('active');
+  const modal = document.getElementById('auth-modal');
+  modal.classList.add('active');
   document.getElementById('login-error').textContent = '';
   document.getElementById('register-error').textContent = '';
-  document.getElementById('login-username').value = '';
+
+  // Limpiar campos
   document.getElementById('login-password').value = '';
   document.getElementById('register-username').value = '';
   document.getElementById('register-password').value = '';
   document.getElementById('register-password2').value = '';
+
+  updateLoginFieldVisibility();
   switchAuthTab('login');
 }
+
+function updateLoginFieldVisibility() {
+  const userFieldContainer = document.getElementById('login-username').parentElement;
+  const usernameInput = document.getElementById('login-username');
+  const modalSub = document.getElementById('auth-modal').querySelector('.auth-modal-sub');
+
+  // Intentar obtener el usuario del perfil seleccionado
+  const selectedProfile = allProfiles.find(p => p.id == viewingProfileId);
+
+  if (selectedProfile && !currentUser) {
+    usernameInput.value = selectedProfile.username;
+    userFieldContainer.style.display = 'none'; // ocultar campo de usuario
+    modalSub.innerHTML = `Iniciando sesión como <strong>${selectedProfile.username}</strong> <br> <a href="#" onclick="showUsernameField(); return false;" style="color:var(--gold); font-size:0.8rem; text-decoration:underline; margin-top:5px; display:inline-block;">¿No eres tú? Cambiar usuario</a>`;
+    setTimeout(() => document.getElementById('login-password').focus(), 50);
+  } else {
+    usernameInput.value = '';
+    userFieldContainer.style.display = 'block'; // mostrar campo de usuario
+    modalSub.textContent = 'Inicia sesión o crea una cuenta para guardar tu progreso';
+    setTimeout(() => usernameInput.focus(), 50);
+  }
+}
+
+function showUsernameField() {
+  const userFieldContainer = document.getElementById('login-username').parentElement;
+  const usernameInput = document.getElementById('login-username');
+  const modalSub = document.getElementById('auth-modal').querySelector('.auth-modal-sub');
+
+  usernameInput.value = '';
+  userFieldContainer.style.display = 'block';
+  modalSub.textContent = 'Inicia sesión con otra cuenta';
+  usernameInput.focus();
+}
+
 function closeAuthModal() {
   document.getElementById('auth-modal').classList.remove('active');
 }
+
 function switchAuthTab(tab) {
   document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
   document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
   document.getElementById('auth-form-login').style.display = tab === 'login' ? 'block' : 'none';
   document.getElementById('auth-form-register').style.display = tab === 'register' ? 'block' : 'none';
+
+  if (tab === 'login') {
+    updateLoginFieldVisibility();
+  } else {
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Crea una cuenta nueva para guardar tu progreso';
+  }
 }
 
 async function doLogin() {
@@ -184,10 +255,20 @@ async function doLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      throw e;
+    }
+
     if (!res.ok) throw new Error(data.error || 'Error de login');
     authToken = data.token;
     currentUser = data.user;
+    viewingProfileId = currentUser.id;  // ← fijar perfil propio
+    isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
     toast(`¡Bienvenido, ${currentUser.username}!`, 't-found');
@@ -217,10 +298,20 @@ async function doRegister() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      throw e;
+    }
+
     if (!res.ok) throw new Error(data.error || 'Error de registro');
     authToken = data.token;
     currentUser = data.user;
+    viewingProfileId = currentUser.id;  // ← fijar perfil propio
+    isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
     toast(`Cuenta creada. ¡Bienvenido, ${currentUser.username}!`, 't-found');
@@ -331,11 +422,13 @@ function updateProfileSelectors() {
 
 async function switchProfile(profileId) {
   if (!profileId) return;
-  profileId = parseInt(profileId);
+  profileId = parseInt(profileId, 10);
   viewingProfileId = profileId;
 
-  // Determine if read-only
-  isReadOnly = !(currentUser && currentUser.id === profileId);
+  // Determinar si es solo lectura comparando como números
+  const myId = currentUser ? parseInt(currentUser.id, 10) : null;
+  isReadOnly = !(myId !== null && myId === profileId);
+  console.log('[switchProfile] profileId:', profileId, 'myId:', myId, 'isReadOnly:', isReadOnly);
 
   // Load that profile's data
   const profile = allProfiles.find(p => p.id === profileId);
@@ -489,11 +582,8 @@ async function loadKappa() {
   setDisp('k-error', 'none');
   setDisp('k-content', 'none');
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: KAPPA_QUERY }) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-    const tasks = data.data.tasks;
+    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa');
+    const tasks = data.tasks;
     let collector = tasks.find(t => t.name === 'The Collector');
     if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
     const seen = new Set();
@@ -640,11 +730,8 @@ async function loadHideout() {
   setDisp('h-error', 'none');
   setDisp('h-content', 'none');
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: HIDEOUT_QUERY }) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-    hideoutStations = data.data.hideoutStations
+    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout');
+    hideoutStations = data.hideoutStations
       .filter(s => s.levels && s.levels.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
 

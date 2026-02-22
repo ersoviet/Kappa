@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+
+  # ─── App Node.js ───────────────────────────────────
+  app:
+    build: .
+    container_name: kappa-app
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      # IMPORTANTE: Cambia este valor por una clave secreta fuerte y aleatoria
+      - JWT_SECRET=2dYGxJg!WYVhL!7kg!k*TYyc^bqep@zP376F6SeoSkca!BgAi6
+    volumes:
+      # Persistencia de la base de datos (el .db se guarda fuera del contenedor)
+      - ./eft_tracker.db:/app/eft_tracker.db
+    networks:
+      - kappa-net
+    # No exponemos el puerto directamente al host; Caddy es el único punto de entrada
+
+  # ─── Caddy (reverse proxy + HTTPS automático) ──────
+  caddy:
+    image: caddy:2-alpine
+    container_name: kappa-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Persistencia de certificados SSL (Let's Encrypt)
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - kappa-net
+    depends_on:
+      - app
+
+networks:
+  kappa-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

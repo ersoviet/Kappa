@@ -1,0 +1,18 @@
+# Dependencias de Node
+node_modules/
+
+# Base de datos (el .db real está en el volume; en desarrollo la copia local no se sube)
+# Comenta esta línea si quieres subir el .db inicial al VPS vía git
+# eft_tracker.db
+
+# Logs
+*.log
+server.log
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
