@@ -7,6 +7,13 @@ const API_URL = 'https://api.tarkov.dev/graphql';
 const KAPPA_STORAGE = 'kappa_tracker_v2';
 const HIDEOUT_STORAGE = 'hideout_tracker_v1';
 const HIDEOUT_INVENTORY_STORAGE = 'hideout_inventory_v2';
+const QUEST_STORAGE = 'quest_tracker_v1';
+
+// DOM Helpers for robustness
+const getEl = (id) => document.getElementById(id);
+const setTxt = (id, txt) => { const el = getEl(id); if (el) el.textContent = txt; };
+const setHtml = (id, html) => { const el = getEl(id); if (el) el.innerHTML = html; };
+const setDisp = (id, s) => { const el = getEl(id); if (el) el.style.display = s; };
 
 // SVG checkmark
 const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -39,6 +46,21 @@ let hideoutItemsFilter = 'all';
 let hideoutItemsSearch = '';
 let hideoutCurrentView = 'stations';
 let selectedStation = null;
+
+// Quest state
+let quests = [];
+let questsCompleted = new Set();
+let playerLevel = 1;
+let targetQuestId = null;
+
+const TRADER_ORDER = [
+  'Prapor', 'Therapist', 'Fence', 'Skier', 'Peacekeeper', 'Mechanic',
+  'Ragman', 'Jaeger', 'Ref', 'Lightkeeper', 'BTR Driver'
+];
+let questFilter = 'all';
+let questSearch = '';
+let activeTraderFilter = 'all';
+let selectedQuest = null;
 
 // Modal state
 let currentModalItem = null;
@@ -79,6 +101,29 @@ function loadHideoutInventory_storage() {
     }
   } catch { }
 }
+function saveQuests() {
+  localStorage.setItem(QUEST_STORAGE, JSON.stringify({
+    completed: [...questsCompleted],
+    level: playerLevel,
+    target: targetQuestId
+  }));
+  syncProfileToServer();
+}
+function loadQuests_storage() {
+  try {
+    const s = localStorage.getItem(QUEST_STORAGE);
+    if (s) {
+      const data = JSON.parse(s);
+      if (Array.isArray(data)) {
+        questsCompleted = new Set(data);
+      } else {
+        questsCompleted = new Set(data.completed || []);
+        playerLevel = data.level || 1;
+        targetQuestId = data.target || null;
+      }
+    }
+  } catch { }
+}
 
 // Sync current state to server (debounced)
 let _syncTimeout = null;
@@ -93,7 +138,10 @@ function syncProfileToServer() {
         body: JSON.stringify({
           kappa_found: [...kappaFound],
           hideout_built: [...hideoutBuilt],
-          hideout_inventory: hideoutItemsInventory
+          hideout_inventory: hideoutItemsInventory,
+          quests_completed: [...questsCompleted],
+          player_level: playerLevel,
+          target_quest_id: targetQuestId
         })
       });
     } catch (e) {
@@ -212,7 +260,10 @@ async function syncProfileToServerImmediate() {
       body: JSON.stringify({
         kappa_found: [...kappaFound],
         hideout_built: [...hideoutBuilt],
-        hideout_inventory: hideoutItemsInventory
+        hideout_inventory: hideoutItemsInventory,
+        quests_completed: [...questsCompleted],
+        player_level: playerLevel,
+        target_quest_id: targetQuestId
       })
     });
   } catch (e) {
@@ -228,10 +279,19 @@ async function loadProfileFromServer(profileId) {
     kappaFound = new Set(profile.kappa_found || []);
     hideoutBuilt = new Set(profile.hideout_built || []);
     hideoutItemsInventory = profile.hideout_inventory || {};
+    questsCompleted = new Set(profile.quests_completed || []);
+    playerLevel = profile.player_level || 1;
+    targetQuestId = profile.target_quest_id || null;
     // Also update localStorage
     localStorage.setItem(KAPPA_STORAGE, JSON.stringify([...kappaFound]));
     localStorage.setItem(HIDEOUT_STORAGE, JSON.stringify([...hideoutBuilt]));
     localStorage.setItem(HIDEOUT_INVENTORY_STORAGE, JSON.stringify(hideoutItemsInventory));
+    localStorage.setItem(QUEST_STORAGE, JSON.stringify({
+      completed: [...questsCompleted],
+      level: playerLevel,
+      target: targetQuestId
+    }));
+    localStorage.setItem(QUEST_STORAGE, JSON.stringify([...questsCompleted]));
   } catch (e) {
     console.warn('Error loading profile:', e);
   }
@@ -283,6 +343,7 @@ async function switchProfile(profileId) {
     kappaFound = new Set(profile.kappa_found || []);
     hideoutBuilt = new Set(profile.hideout_built || []);
     hideoutItemsInventory = profile.hideout_inventory || {};
+    questsCompleted = new Set(profile.quests_completed || []);
   } else {
     await loadProfileFromServer(profileId);
   }
@@ -305,6 +366,9 @@ function refreshCurrentPage() {
     } else {
       renderHideoutItemsView();
     }
+  } else if (currentPage === 'quests' && quests.length) {
+    updateQuestStats();
+    renderQuests();
   }
 }
 
@@ -362,40 +426,46 @@ document.getElementById('auth-modal').addEventListener('click', e => { if (e.tar
 function navigate(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const header = document.getElementById('app-header');
+  const header = getEl('app-header');
+  if (!header) return;
 
   if (page === 'home') {
-    document.getElementById('page-home').classList.add('active');
+    const pHome = getEl('page-home');
+    if (pHome) pHome.classList.add('active');
     header.classList.remove('visible');
     updateHomeMini();
     return;
   }
 
   header.classList.add('visible');
-  document.getElementById('nav-kappa').className = 'nav-tab' + (page === 'kappa' ? ' active-kappa' : '');
-  document.getElementById('nav-hideout').className = 'nav-tab' + (page === 'hideout' ? ' active-hideout' : '');
+  const nKappa = getEl('nav-kappa'); if (nKappa) nKappa.className = 'nav-tab' + (page === 'kappa' ? ' active-kappa' : '');
+  const nHide = getEl('nav-hideout'); if (nHide) nHide.className = 'nav-tab' + (page === 'hideout' ? ' active-hideout' : '');
+  const nQuest = getEl('nav-quests'); if (nQuest) nQuest.className = 'nav-tab' + (page === 'quests' ? ' active-quests' : '');
 
   if (page === 'kappa') {
-    document.getElementById('page-kappa').classList.add('active');
-    document.getElementById('header-logo').innerHTML = '<img src="images/kappa_icon.webp" width="24" height="24"  style="vertical-align: middle;">  KAPPA';
-    document.getElementById('header-prog-label').textContent = 'PROGRESO KAPPA';
-    document.getElementById('header-prog-val').className = '';
-    document.getElementById('header-prog-fill').className = 'prog-bar-fill';
+    const pKappa = getEl('page-kappa'); if (pKappa) pKappa.classList.add('active');
+    setHtml('header-logo', '<img src="images/kappa_icon.webp" width="24" height="24"  style="vertical-align: middle;">  KAPPA');
+    setTxt('header-prog-label', 'PROGRESO KAPPA');
+    const hVal = getEl('header-prog-val'); if (hVal) hVal.className = '';
+    const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill';
     if (!kappaItems.length) loadKappa(); else { updateKappaStats(); renderKappa(); }
   } else if (page === 'hideout') {
-    document.getElementById('page-hideout').classList.add('active');
-    document.getElementById('header-logo').innerHTML = '️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> REFUGIO';
-    document.getElementById('header-prog-label').textContent = 'NIVELES CONSTRUIDOS';
-    document.getElementById('header-prog-val').className = 'blue';
-    document.getElementById('header-prog-fill').className = 'prog-bar-fill blue';
+    const pHide = getEl('page-hideout'); if (pHide) pHide.classList.add('active');
+    setHtml('header-logo', '️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> REFUGIO');
+    setTxt('header-prog-label', 'NIVELES CONSTRUIDOS');
+    const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'blue';
+    const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill blue';
     if (!hideoutStations.length) loadHideout(); else {
       updateHideoutStats();
-      if (hideoutCurrentView === 'stations') {
-        renderStationsGrid();
-      } else {
-        renderHideoutItemsView();
-      }
+      if (hideoutCurrentView === 'stations') renderStationsGrid(); else renderHideoutItemsView();
     }
+  } else if (page === 'quests') {
+    const pQuest = getEl('page-quests'); if (pQuest) pQuest.classList.add('active');
+    setHtml('header-logo', '📜 MISIONES');
+    setTxt('header-prog-label', 'MISIONES COMPLETADAS');
+    const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'yellow';
+    const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill yellow';
+    if (!quests.length) loadQuests(); else { updateQuestStats(); renderQuests(); }
   }
 }
 
@@ -415,9 +485,9 @@ function toast(text, type = 't-found') {
 const KAPPA_QUERY = `{ tasks(lang: en) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
 
 async function loadKappa() {
-  document.getElementById('k-loading').style.display = 'flex';
-  document.getElementById('k-error').style.display = 'none';
-  document.getElementById('k-content').style.display = 'none';
+  setDisp('k-loading', 'flex');
+  setDisp('k-error', 'none');
+  setDisp('k-content', 'none');
   try {
     const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: KAPPA_QUERY }) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -435,29 +505,67 @@ async function loadKappa() {
       }
     }
     kappaItems.sort((a, b) => a.name.localeCompare(b.name));
-    document.getElementById('k-loading').style.display = 'none';
-    document.getElementById('k-content').style.display = 'block';
+    setDisp('k-loading', 'none');
+    setDisp('k-content', 'block');
     updateKappaStats();
     renderKappa();
     updateHomeMini();
   } catch (e) {
-    document.getElementById('k-loading').style.display = 'none';
-    document.getElementById('k-error').style.display = 'flex';
-    document.getElementById('k-error-msg').textContent = `Error: ${e.message}`;
+    setDisp('k-loading', 'none');
+    setDisp('k-error', 'flex');
+    setTxt('k-error-msg', `Error: ${e.message}`);
   }
+}
+
+function updateHomeMini() {
+  const kTotal = kappaItems.length || 0;
+  const kFound = [...kappaFound].filter(id => kappaItems.some(i => i.id === id)).length || [...kappaFound].length;
+  const kPct = kTotal > 0 ? Math.min(100, (kFound / kTotal) * 100) : 0;
+
+  const hKappaLabel = document.getElementById('home-kappa-label');
+  if (hKappaLabel) hKappaLabel.textContent = kTotal > 0 ? `${kFound} / ${kTotal}` : 'Cargando...';
+  const hKappaFill = document.getElementById('home-kappa-fill');
+  if (hKappaFill) hKappaFill.style.width = kPct + '%';
+
+  const hTotal = hideoutStations.reduce((a, s) => a + s.levels.length, 0) || 0;
+  const hBuilt = [...hideoutBuilt].filter(key => !key.startsWith('item_')).length; // Only levels, not items
+  const hPct = hTotal > 0 ? Math.min(100, (hBuilt / hTotal) * 100) : 0;
+
+  const hHideoutPct = document.getElementById('home-hideout-pct');
+  if (hHideoutPct) hHideoutPct.textContent = Math.round(hPct) + '%';
+  const hHideoutFill = document.getElementById('home-hideout-fill');
+  if (hHideoutFill) hHideoutFill.style.width = hPct + '%';
+
+  const qTotal = quests.length || 0;
+  const qFound = questsCompleted.size;
+  const qPct = qTotal > 0 ? Math.min(100, (qFound / qTotal) * 100) : 0;
+
+  const hQuestsPct = document.getElementById('home-quests-pct');
+  if (hQuestsPct) hQuestsPct.textContent = Math.round(qPct) + '%';
+  const hQuestsFill = document.getElementById('home-quests-fill');
+  if (hQuestsFill) hQuestsFill.style.width = qPct + '%';
 }
 
 function updateKappaStats() {
   const total = kappaItems.length;
   const found = [...kappaFound].filter(id => kappaItems.some(i => i.id === id)).length;
   const rem = total - found;
-  document.getElementById('k-total').textContent = total;
-  document.getElementById('k-found').textContent = found;
-  document.getElementById('k-remaining').textContent = rem;
-  document.getElementById('k-banner').style.display = (found === total && total > 0) ? 'flex' : 'none';
-  const pct = total > 0 ? found / total * 100 : 0;
-  document.getElementById('header-prog-val').textContent = `${found} / ${total}`;
-  document.getElementById('header-prog-fill').style.width = pct + '%';
+
+  const elTotal = document.getElementById('k-total');
+  if (elTotal) elTotal.textContent = total;
+  const elFound = document.getElementById('k-found');
+  if (elFound) elFound.textContent = found;
+  const elRem = document.getElementById('k-remaining');
+  if (elRem) elRem.textContent = rem;
+
+  const elBanner = document.getElementById('k-banner');
+  if (elBanner) elBanner.style.display = (found === total && total > 0) ? 'flex' : 'none';
+
+  const pct = total > 0 ? (found / total) * 100 : 0;
+  const elProgVal = document.getElementById('header-prog-val');
+  if (elProgVal) elProgVal.textContent = `${found} / ${total}`;
+  const elProgFill = document.getElementById('header-prog-fill');
+  if (elProgFill) elProgFill.style.width = pct + '%';
 }
 
 function renderKappa() {
@@ -469,7 +577,8 @@ function renderKappa() {
     const mf = kappaFilter === 'all' || (kappaFilter === 'found' && isF) || (kappaFilter === 'missing' && !isF);
     return ms && mf;
   });
-  document.getElementById('k-count').textContent = `${filtered.length} items`;
+  const elCount = document.getElementById('k-count');
+  if (elCount) elCount.textContent = `${filtered.length} items`;
   if (!filtered.length) {
     grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${kappaFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${kappaFilter === 'found' ? 'Aún no has marcado ningún item' : 'No se encontraron items'}</div></div>`;
     return;
@@ -527,9 +636,9 @@ document.querySelectorAll('#page-kappa .filter-tab').forEach(tab => {
 const HIDEOUT_QUERY = `{ hideoutStations(lang: en) { id name levels { id level itemRequirements { item { id name shortName iconLink } count } } } }`;
 
 async function loadHideout() {
-  document.getElementById('h-loading').style.display = 'flex';
-  document.getElementById('h-error').style.display = 'none';
-  document.getElementById('h-content').style.display = 'none';
+  setDisp('h-loading', 'flex');
+  setDisp('h-error', 'none');
+  setDisp('h-content', 'none');
   try {
     const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: HIDEOUT_QUERY }) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -542,8 +651,8 @@ async function loadHideout() {
     // Consolidar items únicos
     consolidateHideoutItems();
 
-    document.getElementById('h-loading').style.display = 'none';
-    document.getElementById('h-content').style.display = 'block';
+    setDisp('h-loading', 'none');
+    setDisp('h-content', 'block');
     updateHideoutStats();
 
     if (hideoutCurrentView === 'stations') {
@@ -553,9 +662,9 @@ async function loadHideout() {
     }
     updateHomeMini();
   } catch (e) {
-    document.getElementById('h-loading').style.display = 'none';
-    document.getElementById('h-error').style.display = 'flex';
-    document.getElementById('h-error-msg').textContent = `Error: ${e.message}`;
+    setDisp('h-loading', 'none');
+    setDisp('h-error', 'flex');
+    setTxt('h-error-msg', `Error: ${e.message}`);
   }
 }
 
@@ -641,7 +750,8 @@ function renderHideoutItemsView() {
     return ms && mf;
   });
 
-  document.getElementById('hi-count').textContent = `${filtered.length} items`;
+  const elCount = document.getElementById('hi-count');
+  if (elCount) elCount.textContent = `${filtered.length} items`;
 
   if (!filtered.length) {
     grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${hideoutItemsFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${hideoutItemsFilter === 'found' ? 'Aún no has completado ningún item' : 'No se encontraron items'}</div></div>`;
@@ -770,9 +880,12 @@ function updateHideoutItemsStats() {
     else if (status === 'none') missing++;
   });
 
-  document.getElementById('hi-total').textContent = total;
-  document.getElementById('hi-found').textContent = complete;
-  document.getElementById('hi-remaining').textContent = missing;
+  const elTotal = document.getElementById('hi-total');
+  if (elTotal) elTotal.textContent = total;
+  const elFound = document.getElementById('hi-found');
+  if (elFound) elFound.textContent = complete;
+  const elRem = document.getElementById('hi-remaining');
+  if (elRem) elRem.textContent = missing;
 }
 
 // Event listeners para filtros de items del refugio
@@ -808,19 +921,28 @@ function isLevelBuilt(stationId, level) { return hideoutBuilt.has(builtKey(stati
 function updateHideoutStats() {
   let total = 0, built = 0;
   hideoutStations.forEach(s => {
-    s.levels.forEach(lv => {
-      total++;
-      if (isLevelBuilt(s.id, lv.level)) built++;
-    });
+    if (s.levels) {
+      s.levels.forEach(lv => {
+        total++;
+        if (isLevelBuilt(s.id, lv.level)) built++;
+      });
+    }
   });
   const rem = total - built;
-  document.getElementById('h-total').textContent = total;
-  document.getElementById('h-built').textContent = built;
-  document.getElementById('h-remaining').textContent = rem;
-  const pct = total > 0 ? built / total * 100 : 0;
+
+  const elTotal = document.getElementById('h-total');
+  if (elTotal) elTotal.textContent = total;
+  const elBuilt = document.getElementById('h-built');
+  if (elBuilt) elBuilt.textContent = built;
+  const elRem = document.getElementById('h-remaining');
+  if (elRem) elRem.textContent = rem;
+
+  const pct = total > 0 ? (built / total) * 100 : 0;
   if (currentPage === 'hideout') {
-    document.getElementById('header-prog-val').textContent = `${built} / ${total}`;
-    document.getElementById('header-prog-fill').style.width = pct + '%';
+    const elProgVal = document.getElementById('header-prog-val');
+    if (elProgVal) elProgVal.textContent = `${built} / ${total}`;
+    const elProgFill = document.getElementById('header-prog-fill');
+    if (elProgFill) elProgFill.style.width = pct + '%';
   }
 }
 
@@ -829,9 +951,11 @@ function getStationBuiltCount(station) {
 }
 
 function renderStationsGrid() {
-  const grid = document.getElementById('h-stations-grid');
-  document.getElementById('h-stations-count').textContent = `${hideoutStations.length} estaciones`;
-  grid.innerHTML = hideoutStations.map(s => {
+  const elGrid = document.getElementById('h-stations-grid');
+  if (!elGrid) return;
+  const elCount = document.getElementById('h-stations-count');
+  if (elCount) elCount.textContent = `${hideoutStations.length} estaciones`;
+  elGrid.innerHTML = hideoutStations.map(s => {
     const max = s.levels.length;
     const done = getStationBuiltCount(s);
     const pct = max > 0 ? done / max * 100 : 0;
@@ -850,11 +974,15 @@ function openStation(stationId) {
   if (!selectedStation) return;
   document.getElementById('h-stations-view').style.display = 'none';
   document.getElementById('h-items-view').style.display = 'none';
-  document.getElementById('h-detail-view').style.display = 'block';
-  document.getElementById('detail-icon').innerHTML = '<img src="images/' + stationIcon(selectedStation.name) + '">';
-  document.getElementById('detail-name').textContent = selectedStation.name;
+  const elDisplay = document.getElementById('h-detail-view');
+  if (elDisplay) elDisplay.style.display = 'block';
+  const elIcon = document.getElementById('detail-icon');
+  if (elIcon) elIcon.innerHTML = '<img src="images/' + stationIcon(selectedStation.name) + '">';
+  const elName = document.getElementById('detail-name');
+  if (elName) elName.textContent = selectedStation.name;
   const done = getStationBuiltCount(selectedStation);
-  document.getElementById('detail-sub').textContent = `${done} de ${selectedStation.levels.length} niveles construidos`;
+  const elSub = document.getElementById('detail-sub');
+  if (elSub) elSub.textContent = `${done} de ${selectedStation.levels.length} niveles construidos`;
   renderLevels();
 }
 
@@ -968,20 +1096,6 @@ function toggleLevelBody(level) {
   const isOpen = body.classList.contains('open');
   body.classList.toggle('open', !isOpen);
   chev.classList.toggle('open', !isOpen);
-}
-
-// ═══════ HOME MINI PROGRESS ═══════
-function updateHomeMini() {
-  // Kappa
-  const kTotal = kappaItems.length;
-  const kFound = kTotal > 0 ? [...kappaFound].filter(id => kappaItems.some(i => i.id === id)).length : 0;
-  document.getElementById('home-kappa-label').textContent = kTotal ? `${kFound} / ${kTotal}` : '— / —';
-  document.getElementById('home-kappa-fill').style.width = kTotal > 0 ? (kFound / kTotal * 100) + '%' : '0%';
-  // Hideout
-  let hTotal = 0, hBuilt = 0;
-  hideoutStations.forEach(s => s.levels.forEach(lv => { hTotal++; if (isLevelBuilt(s.id, lv.level)) hBuilt++; }));
-  document.getElementById('home-hideout-label').textContent = hTotal ? `${hBuilt} / ${hTotal}` : '— / —';
-  document.getElementById('home-hideout-fill').style.width = hTotal > 0 ? (hBuilt / hTotal * 100) + '%' : '0%';
 }
 
 // ═══════ GLOBAL BUTTONS ═══════
@@ -1190,12 +1304,408 @@ function visualFeedback(success) {
   }, 1000);
 }
 
+// ═══════════════════════════════
+// QUEST MODULE
+// ═══════════════════════════════
+const QUESTS_QUERY = `{
+  tasks(lang: en) {
+    id name minPlayerLevel experience
+    trader { id name imageLink }
+    taskRequirements { task { id name } status }
+    objectives { 
+      id type description 
+      ... on TaskObjectiveItem { item { id name shortName iconLink } count foundInRaid }
+    }
+    finishRewards {
+      items { item { id name iconLink } count }
+      traderStanding { trader { id name } standing }
+    }
+  }
+}`;
+
+async function loadQuests() {
+  setDisp('q-loading', 'flex');
+  setDisp('q-error', 'none');
+  setDisp('q-content', 'none');
+  try {
+    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: QUESTS_QUERY }) });
+    const data = await res.json();
+    if (data.errors) throw new Error(data.errors[0].message);
+
+    quests = data.data.tasks.sort((a, b) => (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0));
+
+    renderTraderFilters();
+    updateQuestStats();
+    renderQuests();
+    updateHomeMini();
+
+    setDisp('q-loading', 'none');
+    setDisp('q-content', 'block');
+  } catch (e) {
+    setDisp('q-loading', 'none');
+    setDisp('q-error', 'flex');
+    setTxt('q-error-msg', `Error: ${e.message}`);
+  }
+}
+
+function updateQuestStats() {
+  const total = quests.length;
+  const completed = questsCompleted.size;
+  const remaining = total - completed;
+
+  const elTotal = document.getElementById('q-total');
+  if (elTotal) elTotal.textContent = total;
+  const elComp = document.getElementById('q-completed');
+  if (elComp) elComp.textContent = completed;
+  const elRem = document.getElementById('q-remaining');
+  if (elRem) elRem.textContent = remaining;
+
+  const pct = total > 0 ? (completed / total) * 100 : 0;
+  setTxt('q-pct-text', Math.round(pct) + '%');
+  const elProgVal = getEl('header-prog-val');
+  if (elProgVal) elProgVal.textContent = `${completed} / ${total}`;
+  const elProgFill = getEl('header-prog-fill');
+  if (elProgFill) elProgFill.style.width = pct + '%';
+}
+
+function getTraderWeight(name) {
+  const index = TRADER_ORDER.findIndex(t => name.toLowerCase().includes(t.toLowerCase()));
+  return index === -1 ? 99 : index;
+}
+
+function renderTraderFilters() {
+  const container = getEl('trader-filters');
+  if (!container) return;
+  const tradersMap = {};
+  quests.forEach(q => { if (q.trader) tradersMap[q.trader.id] = q.trader; });
+
+  const sortedTraders = Object.values(tradersMap).sort((a, b) => {
+    return getTraderWeight(a.name) - getTraderWeight(b.name);
+  });
+
+  let html = `<div class="trader-btn ${activeTraderFilter === 'all' ? 'active' : ''}" onclick="filterByTrader('all')">Todos</div>`;
+  sortedTraders.forEach(t => {
+    html += `<div class="trader-btn ${activeTraderFilter === t.id ? 'active' : ''}" onclick="filterByTrader('${t.id}')">
+      <img src="${t.imageLink}" onerror="this.src='images/trader_placeholder.webp'">
+      ${t.name}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function filterByTrader(traderId) {
+  activeTraderFilter = traderId;
+  renderTraderFilters();
+  renderQuests();
+}
+
+function isQuestAvailable(quest) {
+  if (questsCompleted.has(quest.id)) return true;
+  if (quest.minPlayerLevel > playerLevel) return false;
+  if (quest.taskRequirements) {
+    for (const req of quest.taskRequirements) {
+      if (req.task && !questsCompleted.has(req.task.id)) return false;
+    }
+  }
+  return true;
+}
+
+function getQuestPath(questId, visited = new Set()) {
+  if (visited.has(questId)) return [];
+  visited.add(questId);
+  const q = quests.find(i => i.id === questId);
+  if (!q) return [];
+  let path = [];
+  if (q.taskRequirements) {
+    q.taskRequirements.forEach(req => {
+      if (req.task) {
+        path = path.concat(getQuestPath(req.task.id, visited));
+      }
+    });
+  }
+  path.push(q);
+  // Deduplicate by ID
+  const seen = new Set();
+  return path.filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
+}
+
+function renderQuests() {
+  const list = document.getElementById('q-list');
+  const q = questSearch.toLowerCase();
+
+  const filtered = quests.filter(quest => {
+    const ms = !q || quest.name.toLowerCase().includes(q);
+    const mt = activeTraderFilter === 'all' || (quest.trader && quest.trader.id === activeTraderFilter);
+
+    const isComp = questsCompleted.has(quest.id);
+    const isAvail = isQuestAvailable(quest);
+
+    let mf = true;
+    if (questFilter === 'completed') mf = isComp;
+    else if (questFilter === 'available') mf = !isComp && isAvail;
+    else if (questFilter === 'locked') mf = !isComp && !isAvail;
+
+    return ms && mt && mf;
+  }).sort((a, b) => {
+    const wa = a.trader ? getTraderWeight(a.trader.name) : 999;
+    const wb = b.trader ? getTraderWeight(b.trader.name) : 999;
+    if (wa !== wb) return wa - wb;
+    return (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0);
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">No se encontraron misiones</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(quest => {
+    const isComp = questsCompleted.has(quest.id);
+    const isAvail = isQuestAvailable(quest);
+    let statusClass = isComp ? 'is-completed' : (isAvail ? 'is-available' : 'is-locked');
+    const isTarget = targetQuestId === quest.id;
+
+    return `<div class="quest-item ${statusClass}" onclick="showQuestDetail('${quest.id}')">
+      <div class="quest-status-icon">${isComp ? '✅' : (isAvail ? '🔓' : '🔒')}</div>
+      <div class="quest-info">
+        <div class="quest-item-name">${quest.name}</div>
+        <div class="quest-item-trader">${quest.trader ? quest.trader.name : 'Unknown'}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.5rem">
+        <div class="quest-item-level">LVL ${quest.minPlayerLevel || 1}</div>
+        <button class="btn-quest-target ${isTarget ? 'active' : ''}" 
+                onclick="event.stopPropagation(); setQuestGoal('${quest.id}')" 
+                title="${isTarget ? 'Objetivo actual' : 'Fijar como objetivo'}">
+          🎯
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showQuestDetail(questId) {
+  const quest = quests.find(q => q.id === questId);
+  if (!quest) return;
+  selectedQuest = quest;
+
+  const isComp = questsCompleted.has(quest.id);
+  const container = document.getElementById('quest-detail-body');
+
+  let reqsHtml = '';
+  if (quest.minPlayerLevel > 1) {
+    reqsHtml += `<div class="q-req-item met">📊 Nivel del personaje: ${quest.minPlayerLevel}+</div>`;
+  }
+  if (quest.taskRequirements && quest.taskRequirements.length) {
+    quest.taskRequirements.forEach(r => {
+      if (!r.task) return;
+      const met = questsCompleted.has(r.task.id);
+      reqsHtml += `<div class="q-req-item ${met ? 'met' : 'not-met'}">
+        ${met ? '✅' : '❌'} Misión: ${r.task.name}
+      </div>`;
+    });
+  }
+
+  let objHtml = '';
+  if (quest.objectives && quest.objectives.length) {
+    quest.objectives.forEach(o => {
+      const isItem = o.item;
+      objHtml += `<div class="q-obj-item">
+        ${isItem ? `<img src="${o.item.iconLink}" class="q-obj-img">` : '<span style="font-size:1.5rem">🎯</span>'}
+        <div>
+          <div style="font-size:0.9rem">${o.description}</div>
+          ${isItem ? `<div style="font-size:0.75rem; color:var(--text3)">Necesitas ${o.count}x ${o.item.name} ${o.foundInRaid ? '(FIR)' : ''}</div>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  let rewardHtml = '';
+  if (quest.experience) {
+    rewardHtml += `<div class="q-reward-item">⭐ ${quest.experience} XP</div>`;
+  }
+  if (quest.finishRewards) {
+    if (quest.finishRewards.traderStanding) {
+      quest.finishRewards.traderStanding.forEach(r => {
+        rewardHtml += `<div class="q-reward-item">🤝 +${r.standing} ${r.trader.name}</div>`;
+      });
+    }
+    if (quest.finishRewards.items) {
+      quest.finishRewards.items.forEach(i => {
+        rewardHtml += `<div class="q-reward-item">
+          <img src="${i.item.iconLink}" class="q-reward-img">
+          <div>${i.count}x ${i.item.name}</div>
+        </div>`;
+      });
+    }
+  }
+
+  container.innerHTML = `
+    <div class="q-detail-header">
+      <div>
+        <div class="q-detail-title">${quest.name}</div>
+        <div class="q-detail-trader">
+          <img src="${quest.trader.imageLink}">
+          <span>${quest.trader.name}</span>
+        </div>
+      </div>
+      <div class="quest-item-level" style="font-size:1.2rem">NIVEL ${quest.minPlayerLevel || 1}</div>
+    </div>
+    
+    <div class="q-req-box">
+      <div class="q-req-title">Requisitos previos</div>
+      <div class="q-req-list">
+        ${reqsHtml || '<div class="q-req-item met">Sin requisitos previos</div>'}
+      </div>
+    </div>
+    
+    <div class="q-obj-section">
+      <div class="q-obj-title">Objetivos</div>
+      <div class="q-obj-list">${objHtml || 'No hay objetivos listados'}</div>
+    </div>
+    
+    <div class="q-obj-section">
+      <div class="q-obj-title">Recompensas</div>
+      <div class="q-reward-grid">${rewardHtml || 'No hay recompensas listadas'}</div>
+    </div>
+    
+    <div style="display:flex; gap:1rem; margin-top:2rem">
+      <button class="btn-toggle-quest ${isComp ? 'pending' : 'complete'}" style="flex:1" onclick="toggleQuest('${quest.id}')">
+        ${isComp ? 'Marcar como pendiente' : 'Marcar como completada'}
+      </button>
+      <button class="btn btn-ghost" style="border:1px solid var(--accent); color:var(--accent)" onclick="setQuestGoal('${quest.id}')">
+        🎯 Fijar como objetivo
+      </button>
+    </div>
+  `;
+
+  document.getElementById('quest-modal').classList.add('active');
+}
+
+function closeQuestDetail() {
+  document.getElementById('quest-modal').classList.remove('active');
+  selectedQuest = null;
+}
+
+function toggleQuest(id) {
+  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  const quest = quests.find(q => q.id === id);
+  if (!quest) return;
+
+  if (questsCompleted.has(id)) {
+    questsCompleted.delete(id);
+    toast(`${quest.name} — pendiente`, 't-unfound');
+  } else {
+    questsCompleted.add(id);
+    toast(`¡Misión completada: ${quest.name}!`, 't-found');
+    // Also mark as built if it was selected
+  }
+
+  saveQuests();
+  updateQuestStats();
+  renderQuests();
+  updateHomeMini();
+  if (selectedQuest && selectedQuest.id === id) {
+    showQuestDetail(id); // Refresh detail
+  }
+}
+
+function setQuestGoal(id) {
+  if (!id) {
+    targetQuestId = null;
+    renderQuestTarget();
+    saveQuests();
+    renderQuests();
+    return;
+  }
+
+  if (targetQuestId && targetQuestId !== id) {
+    const oldQuest = quests.find(q => q.id === targetQuestId);
+    if (!confirm(`Ya tienes la misión "${oldQuest ? oldQuest.name : '???'}" fijada como objetivo. ¿Deseas reemplazarla por la nueva?`)) {
+      return;
+    }
+  }
+
+  targetQuestId = id;
+  renderQuestTarget();
+  saveQuests();
+  renderQuests(); // Refresh icons in list
+  toast('Objetivo fijado', 't-found');
+  closeQuestDetail();
+}
+
+function renderQuestTarget() {
+  const elArea = getEl('q-target-area');
+  const elContent = getEl('q-target-content');
+  if (!elArea || !elContent) return;
+
+  if (!targetQuestId) {
+    elArea.style.display = 'none';
+    return;
+  }
+
+  elArea.style.display = 'block';
+  const path = getQuestPath(targetQuestId);
+
+  let html = '';
+  path.forEach((q, idx) => {
+    const isDone = questsCompleted.has(q.id);
+    const isGoal = q.id === targetQuestId;
+
+    html += `
+      <div class="q-path-node ${isDone ? 'comp' : ''} ${isGoal ? 'goal' : ''}" onclick="showQuestDetail('${q.id}')" title="${q.name}">
+        <div class="q-path-lvl">LVL ${q.minPlayerLevel || 1}</div>
+        <div class="q-path-name">${q.name}</div>
+        ${isDone ? '✅' : ''}
+      </div>
+    `;
+    if (idx < path.length - 1) {
+      html += `<div class="q-path-arrow">➜</div>`;
+    }
+  });
+
+  elContent.innerHTML = html;
+}
+
+// Quest event listeners
+document.getElementById('q-search').addEventListener('input', e => { questSearch = e.target.value; renderQuests(); });
+document.querySelectorAll('#page-quests .filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    questFilter = tab.dataset.filter;
+    document.querySelectorAll('#page-quests .filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    renderQuests();
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // If we want to auto-load quests if navigating to it
+});
+
+// Click outside quest modal to close
+document.getElementById('quest-modal').addEventListener('click', e => { if (e.target.id === 'quest-modal') closeQuestDetail(); });
+
+// Add event listeners for level and search
+document.addEventListener('DOMContentLoaded', () => {
+  const lvlInput = getEl('player-level-input');
+  if (lvlInput) {
+    lvlInput.addEventListener('change', (e) => {
+      playerLevel = parseInt(e.target.value) || 1;
+      saveQuests();
+      renderQuests();
+      renderQuestTarget();
+    });
+  }
+});
 // ═══════ INIT ═══════
 async function initApp() {
   // Load local data first
   loadKappa_storage();
   loadHideout_storage();
   loadHideoutInventory_storage();
+  loadQuests_storage();
 
   // Try to restore auth session
   if (authToken) {
@@ -1226,6 +1736,10 @@ async function initApp() {
 
   updateAuthUI();
   updateHomeMini();
+
+  const lvlInput = getEl('player-level-input');
+  if (lvlInput) lvlInput.value = playerLevel;
+  renderQuestTarget();
 }
 
 initApp();

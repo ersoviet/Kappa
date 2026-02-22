@@ -49,6 +49,9 @@ async function initDB() {
       kappa_found TEXT DEFAULT '[]',
       hideout_built TEXT DEFAULT '[]',
       hideout_inventory TEXT DEFAULT '{}',
+      quests_completed TEXT DEFAULT '[]',
+      player_level INTEGER DEFAULT 1,
+      target_quest_id TEXT DEFAULT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
@@ -161,7 +164,7 @@ app.post('/api/login', (req, res) => {
 app.get('/api/profiles', (req, res) => {
     const profiles = getAll(`
     SELECT u.id, u.username, u.created_at,
-           p.kappa_found, p.hideout_built, p.hideout_inventory, p.updated_at
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     ORDER BY u.username
@@ -174,7 +177,10 @@ app.get('/api/profiles', (req, res) => {
         updated_at: p.updated_at,
         kappa_found: JSON.parse(p.kappa_found || '[]'),
         hideout_built: JSON.parse(p.hideout_built || '[]'),
-        hideout_inventory: JSON.parse(p.hideout_inventory || '{}')
+        hideout_inventory: JSON.parse(p.hideout_inventory || '{}'),
+        quests_completed: JSON.parse(p.quests_completed || '[]'),
+        player_level: p.player_level || 1,
+        target_quest_id: p.target_quest_id
     })));
 });
 
@@ -182,7 +188,7 @@ app.get('/api/profiles', (req, res) => {
 app.get('/api/profiles/:id', (req, res) => {
     const profile = getRow(`
     SELECT u.id, u.username, u.created_at,
-           p.kappa_found, p.hideout_built, p.hideout_inventory, p.updated_at
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     WHERE u.id = ?
@@ -199,13 +205,16 @@ app.get('/api/profiles/:id', (req, res) => {
         updated_at: profile.updated_at,
         kappa_found: JSON.parse(profile.kappa_found || '[]'),
         hideout_built: JSON.parse(profile.hideout_built || '[]'),
-        hideout_inventory: JSON.parse(profile.hideout_inventory || '{}')
+        hideout_inventory: JSON.parse(profile.hideout_inventory || '{}'),
+        quests_completed: JSON.parse(profile.quests_completed || '[]'),
+        player_level: profile.player_level || 1,
+        target_quest_id: profile.target_quest_id
     });
 });
 
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
-    const { kappa_found, hideout_built, hideout_inventory } = req.body;
+    const { kappa_found, hideout_built, hideout_inventory, quests_completed, player_level, target_quest_id } = req.body;
 
     const sets = [];
     const params = [];
@@ -221,6 +230,18 @@ app.put('/api/profile', authenticateToken, (req, res) => {
     if (hideout_inventory !== undefined) {
         sets.push('hideout_inventory = ?');
         params.push(JSON.stringify(hideout_inventory));
+    }
+    if (quests_completed !== undefined) {
+        sets.push('quests_completed = ?');
+        params.push(JSON.stringify(quests_completed));
+    }
+    if (player_level !== undefined) {
+        sets.push('player_level = ?');
+        params.push(player_level);
+    }
+    if (target_quest_id !== undefined) {
+        sets.push('target_quest_id = ?');
+        params.push(target_quest_id);
     }
 
     if (sets.length === 0) {

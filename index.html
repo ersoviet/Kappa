@@ -39,6 +39,365 @@
             --tr: .22s cubic-bezier(.4, 0, .2, 1);
         }
 
+        /* Quest Specific Styles */
+        .module-card.quests:hover {
+            border-color: var(--yellow);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(234, 179, 8, .12)
+        }
+
+        .module-card.quests .module-title {
+            color: var(--yellow);
+        }
+
+        .module-card.quests .mini-prog-fill {
+            background: linear-gradient(90deg, var(--yellow-d), var(--yellow));
+        }
+
+        .nav-tab.active-quests {
+            background: linear-gradient(135deg, rgba(234, 179, 8, .18), rgba(234, 179, 8, .08));
+            color: var(--yellow);
+            border: 1px solid rgba(234, 179, 8, .25)
+        }
+
+        .yellow-loader {
+            border-top-color: var(--yellow) !important;
+        }
+
+        .prog-bar-fill.yellow {
+            background: linear-gradient(90deg, var(--yellow-d), var(--yellow));
+        }
+
+        .trader-filter-row {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            scrollbar-width: thin;
+        }
+
+        .trader-btn {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all var(--tr);
+            white-space: nowrap;
+            color: var(--text2);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .trader-btn img {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            filter: grayscale(1);
+            transition: filter .3s;
+        }
+
+        .trader-btn:hover {
+            border-color: var(--yellow);
+            color: var(--text);
+        }
+
+        .trader-btn.active {
+            border-color: var(--yellow);
+            background: rgba(234, 179, 8, .1);
+            color: var(--yellow);
+        }
+
+        .trader-btn.active img {
+            filter: grayscale(0);
+        }
+
+        .quest-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .quest-item {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all var(--tr);
+            position: relative;
+        }
+
+        .quest-item:hover {
+            transform: translateX(8px);
+            border-color: var(--yellow);
+            background: var(--bgcard2);
+        }
+
+        .quest-item.is-completed {
+            border-left: 4px solid var(--green);
+            opacity: 0.8;
+        }
+
+        .quest-item.is-locked {
+            opacity: 0.5;
+            filter: grayscale(0.8);
+        }
+
+        .quest-status-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .quest-info {
+            flex: 1;
+        }
+
+        .quest-item-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .quest-item-trader {
+            font-size: 0.75rem;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .quest-item-level {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
+            color: var(--yellow);
+            margin-right: 15px;
+        }
+
+        .quest-detail-content {
+            max-width: 800px;
+            padding: 2.5rem;
+        }
+
+        .q-detail-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .q-detail-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--yellow);
+        }
+
+        .q-detail-trader {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            color: var(--text2);
+        }
+
+        .q-detail-trader img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .q-req-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .q-req-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text3);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .q-req-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .q-req-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .q-req-item.met {
+            color: var(--green);
+        }
+
+        .q-req-item.not-met {
+            color: var(--red);
+        }
+
+        .q-obj-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .q-obj-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .q-obj-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .q-obj-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .q-obj-img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .q-reward-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .q-reward-item {
+            background: rgba(74, 222, 128, 0.05);
+            border: 1px solid rgba(74, 222, 128, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .q-reward-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .btn-toggle-quest {
+            margin-top: 2rem;
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .3s;
+        }
+
+        .btn-toggle-quest.complete {
+            background: var(--green);
+            color: #000;
+        }
+
+        .btn-toggle-quest.pending {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-toggle-quest:hover {
+            transform: scale(1.02);
+        }
+
+        /* MODAL SHARED */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            animation: fadeIn .3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all var(--tr);
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            background: rgba(248, 113, 113, .1);
+            color: var(--red);
+            border-color: rgba(248, 113, 113, .3);
+            transform: rotate(90deg);
+        }
+
         *,
         *::before,
         *::after {
@@ -1028,13 +1387,13 @@
             opacity: .4
         }
 
+
         .empty-state-text {
             font-family: 'Rajdhani', sans-serif;
             font-size: 1.1rem;
             letter-spacing: 1px
         }
 
-        /* HIDEOUT STATION GRID */
         .stations-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -2347,7 +2706,150 @@
             border-radius: 5px;
             font-size: 0.7rem;
             white-space: nowrap;
-            display: none;
+        }
+
+        .quest-item-level {
+            background: rgba(196, 161, 90, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .level-input {
+            background: var(--bg-card);
+            border: 1px solid #333;
+            color: var(--accent);
+            padding: 5px;
+            width: 50px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            text-align: center;
+            font-size: 0.9rem;
+            transition: border-color .3s;
+        }
+
+        .level-input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .q-target-area {
+            background: rgba(196, 161, 90, 0.05);
+            border: 1px dashed var(--accent);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .q-target-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .q-target-label {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .btn-clear-target {
+            background: none;
+            border: none;
+            color: var(--text3);
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .q-target-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .q-path-node {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            font-size: 0.8rem;
+            position: relative;
+        }
+
+        .q-path-node.comp {
+            opacity: 0.5;
+            border-color: var(--green);
+        }
+
+        .q-path-node.goal {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(196, 161, 90, 0.2);
+        }
+
+        .q-path-arrow {
+            color: var(--text3);
+            font-size: 0.8rem;
+        }
+
+        .q-path-lvl {
+            font-size: 0.65rem;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .q-path-name {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .quest-item.is-locked {
+            opacity: 0.4;
+        }
+
+        .quest-item.is-locked .quest-status-icon {
+            color: var(--text3);
+        }
+
+        .btn-quest-target {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #333;
+            color: var(--text3);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .btn-quest-target:hover {
+            border-color: var(--accent);
+            background: rgba(196, 161, 90, 0.1);
+            transform: scale(1.1);
+        }
+
+        .btn-quest-target.active {
+            border-color: var(--accent);
+            background: rgba(196, 161, 90, 0.2);
+            color: var(--accent);
+            box-shadow: 0 0 10px rgba(196, 161, 90, 0.3);
         }
     </style>
 </head>
@@ -2388,16 +2890,26 @@
                     </div>
                 </div>
             </div>
-            <div class="module-card hideout" id="card-hideout" onclick="navigate('hideout')">
+            <div class="module-card hideout" onclick="navigate('hideout')">
                 <span class="module-icon-hidedout"></span>
                 <div class="module-title">REFUGIO</div>
-                <div class="module-desc">Gestiona las construcciones de tu Refugio. Sigue el progreso de cada estación
-                    nivel por nivel.</div>
+                <div class="module-desc">Sigue el progreso de tu refugio y los items necesarios para cada nivel.</div>
                 <div class="module-mini-progress">
-                    <div class="mini-prog-label"><span>NIVELES CONSTRUIDOS</span><span id="home-hideout-label">0 /
-                            ?</span></div>
+                    <div class="mini-prog-label"><span>CONSTRUIDO</span> <span id="home-hideout-pct">0%</span></div>
                     <div class="mini-prog-bar">
-                        <div class="mini-prog-fill" id="home-hideout-fill" style="width:0%"></div>
+                        <div id="home-hideout-fill" class="mini-prog-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="module-card quests" onclick="navigate('quests')">
+                <span class="module-icon">📜</span>
+                <div class="module-title">MISIONES</div>
+                <div class="module-desc">Línea de misiones, requisitos de nivel y dependencias entre traders.</div>
+                <div class="module-mini-progress">
+                    <div class="mini-prog-label"><span>COMPLETADAS</span> <span id="home-quests-pct">0%</span></div>
+                    <div class="mini-prog-bar">
+                        <div id="home-quests-fill" class="mini-prog-fill" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -2409,14 +2921,15 @@
     <header id="app-header">
         <div class="header-inner">
             <button class="btn-home" onclick="navigate('home')">← MENÚ</button>
-            <div class="logo-text" id="header-logo">EFT</div>
-            <div class="nav-tabs">
+            <nav class="nav-tabs">
+                <div class="logo-text" id="header-logo">EFT</div>
                 <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')"><img src="images/kappa_icon.webp"
                         width="24" height="24" style="vertical-align: middle;"> KAPPA</button>
                 <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')"><img
                         src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;">
                     REFUGIO</button>
-            </div>
+                <button class="nav-tab" id="nav-quests" onclick="navigate('quests')">MISIONES</button>
+            </nav>
             <div class="header-progress">
                 <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
                         0</strong></div>
@@ -2622,6 +3135,95 @@
         </div>
     </div>
 
+    <!-- QUESTS PAGE -->
+    <div id="page-quests" class="page">
+        <div class="mod-page">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon total">📜</div>
+                    <div>
+                        <div id="q-total" class="stat-number total">0</div>
+                        <div class="stat-label">Total Misiones</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon found">✓</div>
+                    <div>
+                        <div id="q-completed" class="stat-number found">0</div>
+                        <div class="stat-label">Completadas</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon remaining">⏳</div>
+                    <div>
+                        <div id="q-remaining" class="stat-number remaining">0</div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="q-search" placeholder="Buscar misión por nombre..." />
+                </div>
+                <div style="display:flex; align-items:center; gap:.5rem">
+                    <div class="stat-label" style="margin:0; font-size:.7rem; opacity:.7">MI NIVEL:</div>
+                    <input type="number" id="player-level-input" value="1" min="1" max="80" class="level-input">
+                </div>
+                <div class="filter-tabs">
+                    <div id="q-filter-all" class="filter-tab active" data-filter="all">Todas</div>
+                    <div id="q-filter-missing" class="filter-tab" data-filter="locked">Bloqueadas</div>
+                    <div id="q-filter-available" class="filter-tab" data-filter="available">Disponibles</div>
+                    <div id="q-filter-completed" class="filter-tab" data-filter="completed">Hechas</div>
+                </div>
+            </div>
+
+            <!-- Target Quest Display -->
+            <div id="q-target-area" class="q-target-area" style="display:none">
+                <div class="q-target-header">
+                    <div class="q-target-label">🎯 OBJETIVO ACTUAL</div>
+                    <button class="btn-clear-target" onclick="setQuestGoal(null)">Quitar objetivo</button>
+                </div>
+                <div class="q-target-content" id="q-target-content">
+                    <!-- Path visualization -->
+                </div>
+            </div>
+
+            <!-- Trader Sidebar/Filter -->
+            <div class="trader-filter-row" id="trader-filters">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div id="q-loading" class="loading-screen">
+                <div class="loader yellow-loader"></div>
+                <div class="loading-text">Cargando misiones...</div>
+            </div>
+
+            <div id="q-error" class="error-screen" style="display:none">
+                <div style="font-size:3rem">⚠️</div>
+                <div id="q-error-msg" class="error-text">Error al conectar con la API</div>
+                <button class="btn-home" onclick="loadQuests()">Reintentar</button>
+            </div>
+
+            <div id="q-content" style="display:none">
+                <div id="q-list" class="quest-list">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUEST DETAIL MODAL -->
+    <div id="quest-modal" class="modal">
+        <div class="modal-content quest-detail-content">
+            <button class="modal-close" onclick="closeQuestDetail()">×</button>
+            <div id="quest-detail-body">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
     <!-- Quantity Modal -->
     <div class="modal-overlay" id="qty-modal">
         <div class="modal-box">
@@ -2724,7 +3326,7 @@
     </div>
 
     <div id="toast-container"></div>
-    <script src="app.js"></script>
+    <script src="app.js?v=3.1"></script>
 </body>
 
 </html>
