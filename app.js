@@ -78,6 +78,7 @@ let selectedStation = null;
 // Quest state
 let quests = [];
 let questsCompleted = new Set();
+let questsActive = new Set();
 let playerLevel = 1;
 let targetQuestId = null;
 
@@ -130,7 +131,7 @@ const i18n = {
     header_prog_valuation: "VALORACIÓN DE MERCADO",
     ui_level: "NIVEL", ui_requirements: "Requisitos previos", ui_objectives: "Objetivos", ui_rewards: "Recompensas",
     ui_none: "Ninguno", ui_no_results: "No se encontraron misiones",
-    ui_mark_pending: "Marcar como pendiente", ui_mark_complete: "Marcar como completada",
+    ui_mark_pending: "Marcar como pendiente", ui_mark_complete: "Marcar como completada", ui_mark_active: "Marcar Activa",
     ui_set_goal: "Fijar como objetivo", ui_back_search: "Volver a la búsqueda",
     ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Precio por Slot", ui_best_trader: "Mejor Comerciante",
     ui_direct_sell: "Precio de venta directo", ui_add_info: "Información Adicional", ui_base_price: "BASE PRICE",
@@ -245,7 +246,7 @@ const i18n = {
     header_prog_valuation: "MARKET VALUATION",
     ui_level: "LEVEL", ui_requirements: "Requirements", ui_objectives: "Objectives", ui_rewards: "Rewards",
     ui_none: "None", ui_no_results: "No missions found",
-    ui_mark_pending: "Mark as pending", ui_mark_complete: "Mark as completed",
+    ui_mark_pending: "Mark as pending", ui_mark_complete: "Mark as completed", ui_mark_active: "Mark Active",
     ui_set_goal: "Set as goal", ui_back_search: "Back to search",
     ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Price per Slot", ui_best_trader: "Best Trader",
     ui_direct_sell: "Direct sell price", ui_add_info: "Additional Information", ui_base_price: "BASE PRICE",
@@ -442,6 +443,7 @@ function loadHideoutInventory_storage() {
 function saveQuests() {
   localStorage.setItem(QUEST_STORAGE, JSON.stringify({
     completed: [...questsCompleted],
+    active: [...questsActive],
     level: playerLevel,
     target: targetQuestId
   }));
@@ -456,6 +458,7 @@ function loadQuests_storage() {
         questsCompleted = new Set(data);
       } else {
         questsCompleted = new Set(data.completed || []);
+        questsActive = new Set(data.active || []);
         playerLevel = data.level || 1;
         targetQuestId = data.target || null;
       }
@@ -478,6 +481,7 @@ function syncProfileToServer() {
           hideout_built: [...hideoutBuilt],
           hideout_inventory: hideoutItemsInventory,
           quests_completed: [...questsCompleted],
+          quests_active: [...questsActive],
           player_level: playerLevel,
           target_quest_id: targetQuestId
         })
@@ -665,6 +669,7 @@ async function syncProfileToServerImmediate() {
         hideout_built: [...hideoutBuilt],
         hideout_inventory: hideoutItemsInventory,
         quests_completed: [...questsCompleted],
+        quests_active: [...questsActive],
         player_level: playerLevel,
         target_quest_id: targetQuestId
       })
@@ -683,6 +688,7 @@ async function loadProfileFromServer(profileId) {
     hideoutBuilt = new Set(profile.hideout_built || []);
     hideoutItemsInventory = profile.hideout_inventory || {};
     questsCompleted = new Set(profile.quests_completed || []);
+    questsActive = new Set(profile.quests_active || []);
     playerLevel = profile.player_level || 1;
     targetQuestId = profile.target_quest_id || null;
     // Also update localStorage
@@ -691,6 +697,7 @@ async function loadProfileFromServer(profileId) {
     localStorage.setItem(HIDEOUT_INVENTORY_STORAGE, JSON.stringify(hideoutItemsInventory));
     localStorage.setItem(QUEST_STORAGE, JSON.stringify({
       completed: [...questsCompleted],
+      active: [...questsActive],
       level: playerLevel,
       target: targetQuestId
     }));
@@ -749,6 +756,7 @@ async function switchProfile(profileId) {
     hideoutBuilt = new Set(profile.hideout_built || []);
     hideoutItemsInventory = profile.hideout_inventory || {};
     questsCompleted = new Set(profile.quests_completed || []);
+    questsActive = new Set(profile.quests_active || []);
     playerLevel = profile.player_level || 1;
     targetQuestId = profile.target_quest_id || null;
     if (getEl('player-level-input')) getEl('player-level-input').value = playerLevel;
@@ -1538,6 +1546,7 @@ document.getElementById('btn-reset-quests')?.addEventListener('click', () => {
   if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   if (!confirm(i18n[currentLang].confirm_reset_quests)) return;
   questsCompleted.clear();
+  questsActive.clear();
   targetQuestId = null;
   saveQuests();
   updateQuestStats();
@@ -1901,12 +1910,13 @@ function renderQuests() {
 
   list.innerHTML = filtered.map(quest => {
     const isComp = questsCompleted.has(quest.id);
+    const isActive = questsActive.has(quest.id);
     const isAvail = isQuestAvailable(quest);
-    let statusClass = isComp ? 'is-completed' : (isAvail ? 'is-available' : 'is-locked');
+    let statusClass = isComp ? 'is-completed' : (isActive ? 'is-active' : (isAvail ? 'is-available' : 'is-locked'));
     const isTarget = targetQuestId === quest.id;
 
     return `<div class="quest-item ${statusClass}" onclick="showQuestDetail('${quest.id}')">
-      <div class="quest-status-icon">${isComp ? '✅' : (isAvail ? '🔓' : '🔒')}</div>
+      <div class="quest-status-icon">${isComp ? '✅' : (isActive ? '🔥' : (isAvail ? '🔓' : '🔒'))}</div>
       <div class="quest-info">
         <div class="quest-item-name">${quest.name}</div>
         <div class="quest-item-trader">${quest.trader ? quest.trader.name : 'Unknown'}</div>
@@ -1929,6 +1939,7 @@ function showQuestDetail(questId) {
   selectedQuest = quest;
 
   const isComp = questsCompleted.has(quest.id);
+  const isActive = questsActive.has(quest.id);
   const container = document.getElementById('quest-detail-body');
 
   let reqsHtml = '';
@@ -2010,11 +2021,14 @@ function showQuestDetail(questId) {
       <div class="q-reward-grid">${rewardHtml || i18n[currentLang].ui_none}</div>
     </div>
     
-    <div style="display:flex; gap:1rem; margin-top:2rem">
+    <div style="display:flex; gap:1rem; margin-top:2rem; flex-wrap:wrap;">
       <button class="btn-toggle-quest ${isComp ? 'pending' : 'complete'}" style="flex:1" onclick="toggleQuest('${quest.id}')">
         ${isComp ? i18n[currentLang].ui_mark_pending : i18n[currentLang].ui_mark_complete}
       </button>
-      <button class="btn btn-ghost" style="border:1px solid var(--accent); color:var(--accent)" onclick="setQuestGoal('${quest.id}')">
+      ${!isComp ? `<button class="btn-toggle-quest ${isActive ? 'pending' : ''}" style="flex:1; border-color:var(--blue); color:var(--blue); background:${isActive ? 'rgba(96,165,250,0.1)' : 'transparent'};" onclick="toggleActiveQuest('${quest.id}')">
+        ${isActive ? i18n[currentLang].ui_mark_pending : (i18n[currentLang].ui_mark_active || 'Marcar Activa')}
+      </button>` : ''}
+      <button class="btn btn-ghost" style="border:1px solid var(--accent); color:var(--accent); flex:1" onclick="setQuestGoal('${quest.id}')">
         🎯 ${i18n[currentLang].ui_set_goal}
       </button>
     </div>
@@ -2056,6 +2070,7 @@ function toggleQuest(id) {
       prerequisites.forEach(q => questsCompleted.add(q.id));
     }
     questsCompleted.add(id);
+    questsActive.delete(id);
     toast(i18n[currentLang].toast_quest_completed_title.replace('{0}', quest.name), 't-found');
   }
 
@@ -2066,6 +2081,38 @@ function toggleQuest(id) {
   if (selectedQuest) {
     showQuestDetail(selectedQuest.id);
   }
+}
+
+function toggleActiveQuest(id) {
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
+  const quest = quests.find(q => q.id === id);
+  if (!quest) return;
+
+  if (questsActive.has(id)) {
+    questsActive.delete(id);
+    toast(i18n[currentLang].toast_quest_pending.replace('{0}', quest.name), 't-unfound');
+  } else {
+    questsActive.add(id);
+    questsCompleted.delete(id);
+
+    // Automatically flag recursively all prerequisites to completed
+    const prerequisites = findRecursivePrerequisites(id);
+    if (prerequisites.length > 0) {
+      prerequisites.forEach(q => {
+        questsCompleted.add(q.id);
+        questsActive.delete(q.id);
+      });
+      toast(`Misión activa y requisitos completados`, 't-found');
+    } else {
+      toast(`Misión activa: ${quest.name}`, 't-found');
+    }
+  }
+
+  saveQuests();
+  updateQuestStats();
+  renderQuests();
+  updateHomeMini();
+  if (selectedQuest) showQuestDetail(selectedQuest.id);
 }
 
 function findRecursivePrerequisites(questId, list = []) {
