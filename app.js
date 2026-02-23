@@ -1913,6 +1913,7 @@ function renderQuests() {
 
     const isComp = questsCompleted.has(quest.id);
     const isAvail = isQuestAvailable(quest);
+    const isActive = questsActive.has(quest.id);
 
     let mf = true;
     if (questFilter === 'completed') mf = isComp;
@@ -1921,6 +1922,12 @@ function renderQuests() {
 
     return ms && mt && mf;
   }).sort((a, b) => {
+    if (questFilter === 'active') {
+      const aAct = questsActive.has(a.id) ? 1 : 0;
+      const bAct = questsActive.has(b.id) ? 1 : 0;
+      if (aAct !== bAct) return bAct - aAct;
+      return (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0);
+    }
     const wa = a.trader ? getTraderWeight(a.trader.name) : 999;
     const wb = b.trader ? getTraderWeight(b.trader.name) : 999;
     if (wa !== wb) return wa - wb;
