@@ -59,6 +59,33 @@
             border: 1px solid rgba(234, 179, 8, .25)
         }
 
+        .nav-tab.active-valuation {
+            background: linear-gradient(135deg, rgba(168, 85, 247, .18), rgba(168, 85, 247, .08));
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, .25)
+        }
+
+        .module-card.valuation:hover {
+            border-color: #a855f7;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(168, 85, 247, .12)
+        }
+
+        .module-card.valuation .module-title {
+            color: #a855f7;
+        }
+
+        .module-status-tag {
+            font-size: 0.65rem;
+            color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+            padding: 3px 10px;
+            border-radius: 99px;
+            display: inline-block;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
         .yellow-loader {
             border-top-color: var(--yellow) !important;
         }
@@ -181,6 +208,86 @@
             font-size: 0.8rem;
             color: var(--yellow);
             margin-right: 15px;
+        }
+
+        .v-search-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .v-search-item {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all var(--tr);
+        }
+
+        .v-search-item:hover {
+            border-color: #a855f7;
+            background: var(--bgcard2);
+            transform: translateY(-2px);
+        }
+
+        .v-item-icon {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .v-detail-view {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .v-price-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .v-price-label {
+            font-size: 0.8rem;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .v-price-value {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .v-flea {
+            color: var(--gold);
+        }
+
+        .v-trader {
+            color: var(--blue);
+        }
+
+        .v-banned {
+            color: var(--red);
+            font-size: 0.9rem;
         }
 
         .quest-detail-content {
@@ -2913,6 +3020,14 @@
                     </div>
                 </div>
             </div>
+
+            <div class="module-card valuation" onclick="navigate('valuation')">
+                <span class="module-icon">⚖️</span>
+                <div class="module-title">EVALUACIÓN</div>
+                <div class="module-desc">Consulta precios en tiempo real del Flea Market y mejores ventas a
+                    comerciantes.</div>
+                <div class="module-status-tag">Live Flea Prices</div>
+            </div>
         </div>
         <div class="home-version">tarkov.dev API — EFT Tracker v3.0</div>
     </div>
@@ -2929,6 +3044,7 @@
                         src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;">
                     REFUGIO</button>
                 <button class="nav-tab" id="nav-quests" onclick="navigate('quests')">MISIONES</button>
+                <button class="nav-tab" id="nav-valuation" onclick="navigate('valuation')">PRECIOS</button>
             </nav>
             <div class="header-progress">
                 <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
@@ -3214,6 +3330,41 @@
                 <div id="q-list" class="quest-list">
                     <!-- Dynamically populated -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════ VALUATION PAGE ═══════════════════════ -->
+    <div id="page-valuation" class="page">
+        <div class="mod-page">
+            <div class="valuation-header" style="text-align:center; margin-bottom:2rem;">
+                <h1 style="font-family:'Rajdhani'; color:#a855f7; font-size:2.5rem; letter-spacing:2px;">VALORACIÓN DE
+                    ITEMS</h1>
+                <p style="color:var(--text2); font-size:0.9rem;">Consulta el Flea Market y mejores ofertas de
+                    comerciantes</p>
+            </div>
+
+            <div class="toolbar" style="max-width:800px; margin: 0 auto 2rem;">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="v-search" placeholder="Nombre del item (ej: Graphics Card, Tetriz...)"
+                        oninput="searchValuationItems(this.value)" />
+                </div>
+                <button class="btn-scanner" onclick="startScanner('valuation')" title="Escanear con cámara"
+                    style="background:#a855f7; border-color:#a855f7;">📷</button>
+            </div>
+
+            <div id="v-search-results" class="v-search-results">
+                <!-- Search results will appear here -->
+            </div>
+
+            <div id="v-item-detail" class="v-detail-view" style="display:none;">
+                <!-- Detailed item valuation view -->
+            </div>
+
+            <div id="v-initial-state" style="text-align:center; padding:4rem 0; opacity:0.5;">
+                <div style="font-size:4rem; margin-bottom:1rem;">⚖️</div>
+                <p>Busca un ítem o usa la cámara para ver su valor actual</p>
             </div>
         </div>
     </div>

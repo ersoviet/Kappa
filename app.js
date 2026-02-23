@@ -89,6 +89,10 @@ let questSearch = '';
 let activeTraderFilter = 'all';
 let selectedQuest = null;
 
+// Valuation state
+let valuationSearchResults = [];
+let selectedValuationItem = null;
+
 // Modal state
 let currentModalItem = null;
 
@@ -563,6 +567,13 @@ function navigate(page) {
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'yellow';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill yellow';
     if (!quests.length) loadQuests(); else { updateQuestStats(); renderQuests(); }
+  } else if (page === 'valuation') {
+    const pValuation = getEl('page-valuation'); if (pValuation) pValuation.classList.add('active');
+    const nVal = getEl('nav-valuation'); if (nVal) nVal.className = 'nav-tab active-valuation';
+    setHtml('header-logo', '<span style="color:#a855f7">⚖️ PRECIOS</span>');
+    setTxt('header-prog-label', 'VALORACIÓN DE MERCADO');
+    const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'valuation';
+    const hFill = getEl('header-prog-fill'); if (hFill) { hFill.className = 'prog-bar-fill valuation'; hFill.style.background = '#a855f7'; hFill.style.width = '100%'; }
   }
 }
 
@@ -1254,7 +1265,7 @@ async function initTesseract() {
 }
 
 async function startScanner(mode) {
-  if (isReadOnly) { toast('Solo lectura — cambia a tu perfil para escanear', 't-unfound'); return; }
+  if (isReadOnly && mode !== 'valuation') { toast('Solo lectura — cambia a tu perfil para escanear', 't-unfound'); return; }
   scannerMode = mode;
   scannerActive = true;
   document.getElementById('scanner-modal').classList.add('active');
@@ -1346,7 +1357,15 @@ async function processFrame() {
 }
 
 function matchAndMark(text) {
-  const candidates = scannerMode === 'kappa' ? kappaItems : consolidatedHideoutItems;
+  let candidates = [];
+  if (scannerMode === 'kappa') candidates = kappaItems;
+  else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
+  else if (scannerMode === 'valuation') {
+    // For valuation, we might need a broader list, but let's use kappaItems + consolidated
+    // or better, if we have a full item list cached somewhere.
+    // For now, let's merge the ones we have.
+    candidates = [...kappaItems, ...consolidatedHideoutItems];
+  }
   let bestMatch = null;
   let bestScore = 0;
 
@@ -1375,15 +1394,21 @@ function matchAndMark(text) {
           scannerCooldown = 60; // Pausa para feedback
           visualFeedback(true);
         }
-      } else {
+      } else if (scannerMode === 'hideout') {
         const status = getItemStatus(bestMatch);
         if (status !== 'complete') {
-          // Para el refugio, abrimos el modal de cantidad o incrementamos 1
-          // Por simplicidad en móvil, incrementamos +1 o marcamos como completo
           markHideoutItemAuto(bestMatch);
           scannerCooldown = 60;
           visualFeedback(true);
         }
+      } else if (scannerMode === 'valuation') {
+        // In valuation mode, we search and show the detail
+        stopScanner();
+        getEl('v-search').value = bestMatch.name;
+        searchValuationItems(bestMatch.name).then(() => {
+          showValuationDetail(bestMatch.id);
+        });
+        visualFeedback(true);
       }
     }
   }
@@ -1841,6 +1866,137 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Click outside quest modal to close
 document.getElementById('quest-modal').addEventListener('click', e => { if (e.target.id === 'quest-modal') closeQuestDetail(); });
+
+// ═══════════════════════════════
+// VALUATION MODULE
+// ═══════════════════════════════
+const VALUATION_QUERY = `query GetItems($name: String) {
+  items(name: $name, lang: en) {
+    id name shortName iconLink basePrice avg24hPrice width height
+    sellFor { price currency source }
+  }
+}`;
+
+async function searchValuationItems(query) {
+  const resultsDiv = getEl('v-search-results');
+  const initState = getEl('v-initial-state');
+  const detailView = getEl('v-item-detail');
+
+  if (!query || query.length < 2) {
+    resultsDiv.innerHTML = '';
+    initState.style.display = 'block';
+    detailView.style.display = 'none';
+    resultsDiv.style.display = 'grid'; // Ensure results grid is visible for next search
+    return;
+  }
+
+  initState.style.display = 'none';
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: VALUATION_QUERY,
+        variables: { name: query }
+      })
+    });
+    const data = await res.json();
+    valuationSearchResults = data.data.items || [];
+    renderValuationResults();
+  } catch (e) {
+    console.error('Valuation search error:', e);
+  }
+}
+
+function renderValuationResults() {
+  const container = getEl('v-search-results');
+  container.style.display = 'grid';
+  getEl('v-item-detail').style.display = 'none';
+
+  if (valuationSearchResults.length === 0) {
+    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">No se encontraron ítems</div>';
+    return;
+  }
+
+  container.innerHTML = valuationSearchResults.map(item => `
+    <div class="v-search-item" onclick="showValuationDetail('${item.id}')">
+      <img src="${item.iconLink}" class="v-item-icon" onerror="this.src='images/item_placeholder.webp'">
+      <div style="flex:1">
+        <div class="item-name" style="font-size:0.9rem">${item.name}</div>
+        <div style="font-size:0.75rem; color:var(--text2)">${item.avg24hPrice ? formatRoubles(item.avg24hPrice) : 'No Flea Price'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showValuationDetail(itemId) {
+  const item = valuationSearchResults.find(i => i.id === itemId);
+  if (!item) return;
+
+  selectedValuationItem = item;
+  getEl('v-search-results').style.display = 'none';
+  const detail = getEl('v-item-detail');
+  detail.style.display = 'block';
+
+  const bestTrader = [...item.sellFor]
+    .filter(s => s.source !== 'fleaMarket')
+    .sort((a, b) => b.price - a.price)[0];
+
+  const fleaPrice = item.avg24hPrice;
+
+  detail.innerHTML = `
+    <button class="detail-back" onclick="closeValuationDetail()" style="color:#a855f7">← Volver a la búsqueda</button>
+    <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
+      <img src="${item.iconLink}" style="width:80px; height:80px; background:#000; padding:10px; border-radius:12px; border:1px solid var(--border);">
+      <div>
+        <h2 style="font-family:'Rajdhani'; color:var(--text);">${item.name}</h2>
+        <div style="color:var(--text3); font-size:0.8rem; text-transform:uppercase;">${item.width}x${item.height} SLOTS</div>
+      </div>
+    </div>
+
+    <div class="v-price-card">
+      <div>
+        <div class="v-price-label">Flea Market (Avg 24h)</div>
+        <div class="v-price-value v-flea">${fleaPrice ? formatRoubles(fleaPrice) : '<span class="v-banned">Baneado del Flea</span>'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="v-price-label">Precio por Slot</div>
+        <div class="v-price-value" style="font-size:1.2rem; opacity:0.7;">${fleaPrice ? formatRoubles(Math.round(fleaPrice / (item.width * item.height))) : '-'}</div>
+      </div>
+    </div>
+
+    <div class="v-price-card" style="margin-top:1rem;">
+      <div>
+        <div class="v-price-label">Mejor Comerciante</div>
+        <div class="v-price-value v-trader">${bestTrader ? formatRoubles(bestTrader.price) : 'N/A'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="v-price-label">${bestTrader ? bestTrader.source.toUpperCase() : 'VENDOR'}</div>
+        <div style="font-size:0.8rem; color:var(--text3);">Precio de venta directo</div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem; padding:1rem; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
+       <div class="v-price-label" style="text-align:center;">Información Adicional</div>
+       <div style="display:flex; justify-content:space-around; margin-top:10px;">
+          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">BASE PRICE</div><div style="font-weight:600;">${formatRoubles(item.basePrice)}</div></div>
+          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">WIKI</div><div><a href="https://escapefromtarkov.fandom.com/wiki/${item.name.replace(/ /g, '_')}" target="_blank" style="color:#a855f7; font-size:0.8rem;">Ver Wiki ↗</a></div></div>
+       </div>
+    </div>
+  `;
+}
+
+function closeValuationDetail() {
+  selectedValuationItem = null;
+  getEl('v-item-detail').style.display = 'none';
+  getEl('v-search-results').style.display = 'grid';
+  getEl('v-initial-state').style.display = 'none';
+}
+
+function formatRoubles(val) {
+  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(val);
+}
 
 // Add event listeners for level and search
 document.addEventListener('DOMContentLoaded', () => {
