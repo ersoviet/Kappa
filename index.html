@@ -2281,58 +2281,137 @@
         @media(max-width:768px) {
             .module-cards {
                 grid-template-columns: 1fr;
-                max-width: 380px
+                max-width: 380px;
+                margin: 0 auto;
             }
 
             .header-inner {
                 flex-wrap: wrap;
                 height: auto;
                 padding: .75rem 0;
-                gap: .6rem
+                gap: .6rem;
+                justify-content: center;
             }
 
             .header-progress {
                 width: 100%;
-                max-width: none
+                max-width: none;
+                margin-top: 5px;
             }
 
             .stats-bar {
-                grid-template-columns: repeat(3, 1fr)
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+
+            .stat-icon {
+                font-size: 1.25rem;
+                margin-bottom: 5px;
             }
 
             #app-header {
-                padding: 0 1rem
+                padding: 0 1rem;
             }
 
             .mod-page {
-                padding: 1rem
+                padding: 1rem 0.5rem;
+                overflow-x: hidden;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .filter-tabs {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .search-box {
+                flex: 1;
+                min-width: 100%;
+            }
+
+            .quest-item {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .quest-item>div:last-child {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 5px;
+                padding-top: 5px;
+                border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            .q-reward-grid {
+                grid-template-columns: 1fr 1fr;
             }
         }
 
         @media(max-width:480px) {
             .home-title {
-                font-size: 2.5rem
+                font-size: 2.5rem;
             }
 
             .stats-bar {
-                grid-template-columns: 1fr
+                grid-template-columns: 1fr;
             }
 
             .toolbar {
-                flex-direction: column
+                flex-direction: column;
+                align-items: stretch;
             }
 
             .filter-tabs {
-                width: 100%
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
             }
 
             .filter-tab {
-                flex: 1;
-                text-align: center
+                text-align: center;
+                white-space: normal;
+                padding: 8px 5px;
+                font-size: 0.8rem;
             }
 
             .stations-grid {
-                grid-template-columns: 1fr 1fr
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+                margin: 10px;
+                width: calc(100% - 20px);
+            }
+
+            .items-grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: 10px;
+            }
+
+            input[type="text"],
+            input[type="number"],
+            .search-box {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .v-search-results {
+                grid-template-columns: 1fr;
+            }
+
+            .quest-item {
+                padding: 12px;
+            }
+
+            .q-detail-title {
+                font-size: 1.5rem;
+                word-break: break-word;
             }
         }
 
