@@ -29,7 +29,9 @@ async function fetchWithCache(query, cacheKey, ttlHours = 24) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query })
+    body: JSON.stringify({
+      query: query.replace('lang: en', `lang: ${currentLang}`) // Dynamic language in query
+    })
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -100,8 +102,85 @@ let currentModalItem = null;
 let authToken = localStorage.getItem('eft_auth_token') || null;
 let currentUser = null; // { id, username }
 let allProfiles = []; // Array of all user profiles from server
-let viewingProfileId = null; // ID of profile currently being viewed
+let viewingProfileId = null;
 let isReadOnly = false; // true when viewing another user's profile
+
+// ═══════ I18N SYSTEM ═══════
+let currentLang = localStorage.getItem('eft_tracker_lang') || 'es';
+
+const i18n = {
+  es: {
+    nav_kappa: "KAPPA", nav_hideout: "REFUGIO", nav_quests: "MISIONES", nav_prices: "PRECIOS",
+    home_kappa_title: "KAPPA", home_kappa_desc: "Seguimiento de objetos necesarios para el contenedor Kappa.",
+    home_hideout_title: "REFUGIO", home_hideout_desc: "Mejoras de estaciones, materiales requeridos y gestión de inventario.",
+    home_quests_title: "MISIONES", home_quests_desc: "Línea de misiones, requisitos de nivel y dependencias entre traders.",
+    home_valuation_title: "EVALUACIÓN", home_valuation_desc: "Consulta precios en tiempo real del Flea Market y mejores ventas a comerciantes.",
+    home_valuation_tag: "PRECIOS FLEA LIVE",
+    home_stats_found: "ENCONTRADOS", home_stats_built: "CONSTRUIDO", home_stats_completed: "COMPLETADAS",
+    msg_readonly: "Solo lectura — este no es tu perfil",
+    confirm_reset_quests: "¿Estás seguro de que deseas borrar TODO el progreso de misiones?",
+    confirm_reset_kappa: "¿Resetear progreso de Kappa?",
+    confirm_reset_hideout: "¿Resetear progreso del Refugio (niveles construidos E inventario de items)?",
+    toast_quest_completed: "¡Misión completada!",
+    toast_quest_pending: "Misión pendiente",
+    toast_profile_loaded: "Perfil cargado",
+    toast_error_api: "Error al conectar con la API",
+    header_prog_kappa: "PROGRESO KAPPA",
+    header_prog_hideout: "NIVELES CONSTRUIDOS",
+    header_prog_quests: "MISIONES COMPLETADAS",
+    header_prog_valuation: "VALORACIÓN DE MERCADO"
+  },
+  en: {
+    nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
+    home_kappa_title: "KAPPA", home_kappa_desc: "Track items required for the 'The Collector' quest and Kappa container.",
+    home_hideout_title: "HIDEOUT", home_hideout_desc: "Station upgrades, required materials, and inventory management.",
+    home_quests_title: "QUESTS", home_quests_desc: "Quest lines, level requirements, and trader dependencies.",
+    home_valuation_title: "VALUATION", home_valuation_desc: "Check real-time Flea Market prices and best trader sell values.",
+    home_valuation_tag: "LIVE FLEA PRICES",
+    home_stats_found: "FOUND", home_stats_built: "BUILT", home_stats_completed: "COMPLETED",
+    msg_readonly: "Read-only — this is not your profile",
+    confirm_reset_quests: "Are you sure you want to clear ALL quest progress?",
+    confirm_reset_kappa: "Reset Kappa progress?",
+    confirm_reset_hideout: "Reset Hideout progress (built levels AND item inventory)?",
+    toast_quest_completed: "Quest completed!",
+    toast_quest_pending: "Quest pending",
+    toast_profile_loaded: "Profile loaded",
+    toast_error_api: "Error connecting to API",
+    header_prog_kappa: "KAPPA PROGRESS",
+    header_prog_hideout: "STATIONS BUILT",
+    header_prog_quests: "QUESTS COMPLETED",
+    header_prog_valuation: "MARKET VALUATION"
+  }
+};
+
+function changeLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('eft_tracker_lang', lang);
+  updateUI();
+
+  // Refresh data if on a page that needs API translation
+  if (currentPage === 'kappa') { kappaItems = []; loadKappa(); }
+  else if (currentPage === 'hideout') { hideoutStations = []; loadHideout(); }
+  else if (currentPage === 'quests') { quests = []; loadQuests(); }
+  else if (currentPage === 'valuation' && selectedValuationItem) { closeValuationDetail(); }
+}
+
+function updateUI() {
+  // Update static elements with data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[currentLang][key]) {
+      el.textContent = i18n[currentLang][key];
+    }
+  });
+
+  // Update language buttons active state
+  document.getElementById('btn-lang-es').classList.toggle('active', currentLang === 'es');
+  document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+
+  // Update existing dynamic UI components
+  if (currentPage === 'home') updateHomeMini();
+}
 
 // ═══════ STORAGE ═══════
 function saveKappa() {
@@ -546,14 +625,14 @@ function navigate(page) {
   if (page === 'kappa') {
     const pKappa = getEl('page-kappa'); if (pKappa) pKappa.classList.add('active');
     setHtml('header-logo', '<img src="images/kappa_icon.webp" width="24" height="24"  style="vertical-align: middle;">  KAPPA');
-    setTxt('header-prog-label', 'PROGRESO KAPPA');
+    setTxt('header-prog-label', i18n[currentLang].header_prog_kappa);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = '';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill';
     if (!kappaItems.length) loadKappa(); else { updateKappaStats(); renderKappa(); }
   } else if (page === 'hideout') {
     const pHide = getEl('page-hideout'); if (pHide) pHide.classList.add('active');
-    setHtml('header-logo', '️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> REFUGIO');
-    setTxt('header-prog-label', 'NIVELES CONSTRUIDOS');
+    setHtml('header-logo', '️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> ' + i18n[currentLang].nav_hideout);
+    setTxt('header-prog-label', i18n[currentLang].header_prog_hideout);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'blue';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill blue';
     if (!hideoutStations.length) loadHideout(); else {
@@ -562,16 +641,16 @@ function navigate(page) {
     }
   } else if (page === 'quests') {
     const pQuest = getEl('page-quests'); if (pQuest) pQuest.classList.add('active');
-    setHtml('header-logo', '📜 MISIONES');
-    setTxt('header-prog-label', 'MISIONES COMPLETADAS');
+    setHtml('header-logo', '📜 ' + i18n[currentLang].nav_quests);
+    setTxt('header-prog-label', i18n[currentLang].header_prog_quests);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'yellow';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill yellow';
     if (!quests.length) loadQuests(); else { updateQuestStats(); renderQuests(); }
   } else if (page === 'valuation') {
     const pValuation = getEl('page-valuation'); if (pValuation) pValuation.classList.add('active');
     const nVal = getEl('nav-valuation'); if (nVal) nVal.className = 'nav-tab active-valuation';
-    setHtml('header-logo', '<span style="color:#a855f7">⚖️ PRECIOS</span>');
-    setTxt('header-prog-label', 'VALORACIÓN DE MERCADO');
+    setHtml('header-logo', '<span style="color:#a855f7">⚖️ ' + i18n[currentLang].nav_prices + '</span>');
+    setTxt('header-prog-label', i18n[currentLang].header_prog_valuation);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'valuation';
     const hFill = getEl('header-prog-fill'); if (hFill) { hFill.className = 'prog-bar-fill valuation'; hFill.style.background = '#a855f7'; hFill.style.width = '100%'; }
   }
@@ -1157,7 +1236,7 @@ function reqItemKey(stationId, level, itemId) { return `item_${stationId}_${leve
 function isReqMarked(stationId, level, itemId) { return hideoutBuilt.has(reqItemKey(stationId, level, itemId)); }
 
 function toggleReqItem(stationId, level, itemId, itemName) {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   const key = reqItemKey(stationId, level, itemId);
   if (hideoutBuilt.has(key)) hideoutBuilt.delete(key);
   else { hideoutBuilt.add(key); toast(`${itemName} — recopilado`, 't-built'); }
@@ -1207,12 +1286,12 @@ document.getElementById('btn-reload').addEventListener('click', () => {
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   if (currentPage === 'kappa') {
-    if (!confirm('¿Resetear progreso de Kappa?')) return;
-    kappaFound.clear(); saveKappa(); updateKappaStats(); renderKappa(); toast('Progreso Kappa reseteado', 't-unfound');
+    if (!confirm(i18n[currentLang].confirm_reset_kappa)) return;
+    kappaFound.clear(); saveKappa(); updateKappaStats(); renderKappa(); toast('Kappa progress reset', 't-unfound');
   } else if (currentPage === 'hideout') {
-    if (!confirm('¿Resetear progreso del Refugio (niveles construidos E inventario de items)?')) return;
+    if (!confirm(i18n[currentLang].confirm_reset_hideout)) return;
     hideoutBuilt.clear();
     hideoutItemsInventory = {};
     saveHideout();
@@ -1233,8 +1312,8 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 });
 
 document.getElementById('btn-reset-quests')?.addEventListener('click', () => {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
-  if (!confirm('¿Estás seguro de que deseas borrar TODO el progreso de misiones? Esta acción no se puede deshacer.')) return;
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
+  if (!confirm(i18n[currentLang].confirm_reset_quests)) return;
   questsCompleted.clear();
   targetQuestId = null;
   saveQuests();
@@ -1870,8 +1949,8 @@ document.getElementById('quest-modal').addEventListener('click', e => { if (e.ta
 // ═══════════════════════════════
 // VALUATION MODULE
 // ═══════════════════════════════
-const VALUATION_QUERY = `query GetItems($name: String) {
-  items(name: $name, lang: en) {
+const VALUATION_QUERY = `query GetItems($name: String, $lang: LanguageCode) {
+  items(name: $name, lang: $lang) {
     id name shortName iconLink basePrice avg24hPrice width height
     sellFor { price currency source }
   }
@@ -1898,7 +1977,7 @@ async function searchValuationItems(query) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query: VALUATION_QUERY,
-        variables: { name: query }
+        variables: { name: query, lang: currentLang }
       })
     });
     const data = await res.json();
@@ -2046,6 +2125,7 @@ async function initApp() {
   }
 
   updateAuthUI();
+  updateUI();
   updateHomeMini();
 
   const lvlInput = getEl('player-level-input');

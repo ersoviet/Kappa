@@ -2022,6 +2022,38 @@
         }
 
         /* BUTTONS */
+        .lang-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .btn-lang {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            filter: grayscale(1);
+            opacity: 0.5;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .btn-lang:hover {
+            opacity: 1;
+            filter: grayscale(0.5);
+        }
+
+        .btn-lang.active {
+            background: rgba(255, 255, 255, 0.1);
+            filter: grayscale(0);
+            opacity: 1;
+        }
+
         .btn {
             padding: 8px 16px;
             border-radius: 8px;
@@ -2987,22 +3019,26 @@
         <div class="module-cards">
             <div class="module-card kappa" id="card-kappa" onclick="navigate('kappa')">
                 <span class="module-icon-kappa"></span>
-                <div class="module-title">KAPPA</div>
-                <div class="module-desc">Rastrea los 39 items necesarios para completar la quest "The Collector" y
-                    conseguir el contenedor Kappa.</div>
+                <div class="module-title" data-i18n="home_kappa_title">KAPPA</div>
+                <div class="module-desc" data-i18n="home_kappa_desc">Seguimiento de objetos necesarios para el
+                    contenedor Kappa.</div>
                 <div class="module-mini-progress">
-                    <div class="mini-prog-label"><span>PROGRESO</span><span id="home-kappa-label">0 / ?</span></div>
+                    <div class="mini-prog-label"><span data-i18n="home_stats_found">ENCONTRADOS</span><span
+                            id="home-kappa-pct">0%</span></div>
                     <div class="mini-prog-bar">
-                        <div class="mini-prog-fill" id="home-kappa-fill" style="width:0%"></div>
+                        <div id="home-kappa-fill" class="mini-prog-fill" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
+
             <div class="module-card hideout" onclick="navigate('hideout')">
                 <span class="module-icon-hidedout"></span>
-                <div class="module-title">REFUGIO</div>
-                <div class="module-desc">Sigue el progreso de tu refugio y los items necesarios para cada nivel.</div>
+                <div class="module-title" data-i18n="home_hideout_title">REFUGIO</div>
+                <div class="module-desc" data-i18n="home_hideout_desc">Mejoras de estaciones, materiales requeridos y
+                    gestión de inventario.</div>
                 <div class="module-mini-progress">
-                    <div class="mini-prog-label"><span>CONSTRUIDO</span> <span id="home-hideout-pct">0%</span></div>
+                    <div class="mini-prog-label"><span data-i18n="home_stats_built">CONSTRUIDO</span> <span
+                            id="home-hideout-pct">0%</span></div>
                     <div class="mini-prog-bar">
                         <div id="home-hideout-fill" class="mini-prog-fill" style="width: 0%"></div>
                     </div>
@@ -3011,10 +3047,12 @@
 
             <div class="module-card quests" onclick="navigate('quests')">
                 <span class="module-icon">📜</span>
-                <div class="module-title">MISIONES</div>
-                <div class="module-desc">Línea de misiones, requisitos de nivel y dependencias entre traders.</div>
+                <div class="module-title" data-i18n="home_quests_title">MISIONES</div>
+                <div class="module-desc" data-i18n="home_quests_desc">Línea de misiones, requisitos de nivel y
+                    dependencias entre traders.</div>
                 <div class="module-mini-progress">
-                    <div class="mini-prog-label"><span>COMPLETADAS</span> <span id="home-quests-pct">0%</span></div>
+                    <div class="mini-prog-label"><span data-i18n="home_stats_completed">COMPLETADAS</span> <span
+                            id="home-quests-pct">0%</span></div>
                     <div class="mini-prog-bar">
                         <div id="home-quests-fill" class="mini-prog-fill" style="width: 0%"></div>
                     </div>
@@ -3023,10 +3061,10 @@
 
             <div class="module-card valuation" onclick="navigate('valuation')">
                 <span class="module-icon">⚖️</span>
-                <div class="module-title">EVALUACIÓN</div>
-                <div class="module-desc">Consulta precios en tiempo real del Flea Market y mejores ventas a
-                    comerciantes.</div>
-                <div class="module-status-tag">Live Flea Prices</div>
+                <div class="module-title" data-i18n="home_valuation_title">EVALUACIÓN</div>
+                <div class="module-desc" data-i18n="home_valuation_desc">Consulta precios en tiempo real del Flea Market
+                    y mejores ventas a comerciantes.</div>
+                <div class="module-status-tag" data-i18n="home_valuation_tag">Live Flea Prices</div>
             </div>
         </div>
         <div class="home-version">tarkov.dev API — EFT Tracker v3.0</div>
@@ -3038,13 +3076,18 @@
             <button class="btn-home" onclick="navigate('home')">← MENÚ</button>
             <nav class="nav-tabs">
                 <div class="logo-text" id="header-logo">EFT</div>
-                <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')"><img src="images/kappa_icon.webp"
-                        width="24" height="24" style="vertical-align: middle;"> KAPPA</button>
-                <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')"><img
-                        src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;">
-                    REFUGIO</button>
-                <button class="nav-tab" id="nav-quests" onclick="navigate('quests')">MISIONES</button>
-                <button class="nav-tab" id="nav-valuation" onclick="navigate('valuation')">PRECIOS</button>
+                <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')">
+                    <img src="images/kappa_icon.webp" width="24" height="24" style="vertical-align: middle;">
+                    <span data-i18n="nav_kappa">KAPPA</span>
+                </button>
+                <button class="nav-tab" id="nav-hideout" onclick="navigate('hideout')">
+                    <img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;">
+                    <span data-i18n="nav_hideout">REFUGIO</span>
+                </button>
+                <button class="nav-tab" id="nav-quests" onclick="navigate('quests')"
+                    data-i18n="nav_quests">MISIONES</button>
+                <button class="nav-tab" id="nav-valuation" onclick="navigate('valuation')"
+                    data-i18n="nav_prices">PRECIOS</button>
             </nav>
             <div class="header-progress">
                 <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
@@ -3059,7 +3102,11 @@
                         onchange="switchProfile(this.value)"></select>
                 </div>
             </div>
-            <div style="display:flex;gap:.5rem">
+            <div style="display:flex;gap:.5rem;align-items:center;">
+                <div class="lang-selector">
+                    <button class="btn-lang" id="btn-lang-es" onclick="changeLanguage('es')">🇪🇸</button>
+                    <button class="btn-lang" id="btn-lang-en" onclick="changeLanguage('en')">🇺🇸</button>
+                </div>
                 <button class="btn btn-ghost" id="btn-reload">↻</button>
                 <button class="btn btn-ghost" id="btn-reset">☐</button>
             </div>
