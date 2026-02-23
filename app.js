@@ -933,8 +933,16 @@ async function loadKappa() {
 }
 
 function updateHomeMini() {
-  const kTotal = kappaItems.length || 0;
-  const kFound = [...kappaFound].filter(id => kappaItems.some(i => i.id === id)).length || [...kappaFound].length;
+  let statsCache = null;
+  try {
+    const cached = localStorage.getItem('eft_home_stats_cache');
+    if (cached) statsCache = JSON.parse(cached);
+  } catch (e) { }
+
+  const kTotal = kappaItems.length || (statsCache ? statsCache.kTotal : 0);
+  const kFound = kappaItems.length > 0
+    ? [...kappaFound].filter(id => kappaItems.some(i => i.id === id)).length
+    : [...kappaFound].length;
   const kPct = kTotal > 0 ? Math.min(100, (kFound / kTotal) * 100) : 0;
 
   const hKappaLabel = document.getElementById('home-kappa-label');
@@ -942,7 +950,7 @@ function updateHomeMini() {
   const hKappaFill = document.getElementById('home-kappa-fill');
   if (hKappaFill) hKappaFill.style.width = kPct + '%';
 
-  const hTotal = hideoutStations.reduce((a, s) => a + s.levels.length, 0) || 0;
+  const hTotal = hideoutStations.length > 0 ? hideoutStations.reduce((a, s) => a + s.levels.length, 0) : (statsCache ? statsCache.hTotal : 0);
   const hBuilt = [...hideoutBuilt].filter(key => !key.startsWith('item_')).length; // Only levels, not items
   const hPct = hTotal > 0 ? Math.min(100, (hBuilt / hTotal) * 100) : 0;
 
@@ -951,7 +959,7 @@ function updateHomeMini() {
   const hHideoutFill = document.getElementById('home-hideout-fill');
   if (hHideoutFill) hHideoutFill.style.width = hPct + '%';
 
-  const qTotal = quests.length || 0;
+  const qTotal = quests.length || (statsCache ? statsCache.qTotal : 0);
   const qFound = questsCompleted.size;
   const qPct = qTotal > 0 ? Math.min(100, (qFound / qTotal) * 100) : 0;
 
@@ -959,6 +967,15 @@ function updateHomeMini() {
   if (hQuestsPct) hQuestsPct.textContent = Math.round(qPct) + '%';
   const hQuestsFill = document.getElementById('home-quests-fill');
   if (hQuestsFill) hQuestsFill.style.width = qPct + '%';
+
+  // Save to cache if we have actual loaded arrays
+  if (kappaItems.length > 0 || hideoutStations.length > 0 || quests.length > 0) {
+    localStorage.setItem('eft_home_stats_cache', JSON.stringify({
+      kTotal: kappaItems.length > 0 ? kTotal : (statsCache ? statsCache.kTotal : 0),
+      hTotal: hideoutStations.length > 0 ? hTotal : (statsCache ? statsCache.hTotal : 0),
+      qTotal: quests.length > 0 ? qTotal : (statsCache ? statsCache.qTotal : 0)
+    }));
+  }
 }
 
 function updateKappaStats() {
