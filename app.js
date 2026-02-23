@@ -1674,6 +1674,7 @@ function matchAndMark(text) {
   let candidates = [];
   if (scannerMode === 'kappa') candidates = kappaItems;
   else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
+  else if (scannerMode === 'quests_active') candidates = quests;
   else if (scannerMode === 'valuation') {
     // For valuation, we might need a broader list, but let's use kappaItems + consolidated
     // or better, if we have a full item list cached somewhere.
@@ -1723,6 +1724,12 @@ function matchAndMark(text) {
           showValuationDetail(bestMatch.id);
         });
         visualFeedback(true);
+      } else if (scannerMode === 'quests_active') {
+        if (!questsActive.has(bestMatch.id) && !questsCompleted.has(bestMatch.id)) {
+          toggleActiveQuest(bestMatch.id);
+          scannerCooldown = 60;
+          visualFeedback(true);
+        }
       }
     }
   }
