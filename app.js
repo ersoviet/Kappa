@@ -144,6 +144,7 @@ const i18n = {
     ui_back_to_stations: "Volver a Estaciones", ui_kappa_needed_title: "Items Necesarios",
     ui_search_quest: "Buscar misión por nombre...", ui_my_level: "MI NIVEL:", ui_delete: "BORRAR",
     ui_filter_all_f: "Todas", ui_filter_locked: "Bloqueadas", ui_filter_available: "Disponibles", ui_filter_completed: "Hechas",
+    ui_map: "MAPA", ui_view_map: "VER MAPA",
     ui_current_goal: "OBJETIVO ACTUAL", ui_clear_goal: "Quitar objetivo",
     ui_valuation_title: "VALORACIÓN DE ITEMS", ui_valuation_desc: "Consulta el Flea Market y mejores ofertas de comerciantes",
     ui_valuation_search: "Nombre del item (ej: Graphics Card, Tetriz...)",
@@ -262,6 +263,7 @@ const i18n = {
     ui_back_to_stations: "Back to Stations", ui_kappa_needed_title: "Required Items",
     ui_search_quest: "Search quest by name...", ui_my_level: "MY LEVEL:", ui_delete: "DELETE",
     ui_filter_all_f: "All", ui_filter_locked: "Locked", ui_filter_available: "Available", ui_filter_completed: "Done",
+    ui_map: "MAP", ui_view_map: "VIEW MAP",
     ui_current_goal: "CURRENT GOAL", ui_clear_goal: "Clear goal",
     ui_valuation_title: "ITEM VALUATION", ui_valuation_desc: "Check Flea Market and best trader offers",
     ui_valuation_search: "Item name (e.g. Graphics Card, Tetriz...)",
@@ -1743,15 +1745,18 @@ const QUESTS_QUERY = `query GetQuests($lang: LanguageCode) {
   tasks(lang: $lang) {
     id name minPlayerLevel experience
     trader { id name imageLink }
+    map { id name normalizedName }
     taskRequirements { task { id name } status }
     objectives { 
       id type description 
+      maps { id name normalizedName }
       ... on TaskObjectiveItem { item { id name shortName iconLink } count foundInRaid }
     }
     finishRewards {
       items { item { id name iconLink } count }
       traderStanding { trader { id name } standing }
     }
+    wikiLink
   }
 }`;
 
@@ -1981,6 +1986,8 @@ function showQuestDetail(questId) {
         <div class="q-detail-trader">
           <img src="${quest.trader.imageLink}">
           <span>${quest.trader.name}</span>
+          ${quest.map ? `<a href="https://tarkov.dev/map/${quest.map.normalizedName}" target="_blank" class="quest-map-link" onclick="event.stopPropagation()">📍 ${i18n[currentLang].ui_map}: ${quest.map.name}</a>` : ''}
+          ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="quest-wiki-link" onclick="event.stopPropagation()">📖 Wiki</a>` : ''}
         </div>
       </div>
       <div class="quest-item-level" style="font-size:1.2rem">${i18n[currentLang].ui_level} ${quest.minPlayerLevel || 1}</div>
