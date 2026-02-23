@@ -16,8 +16,9 @@ const setHtml = (id, html) => { const el = getEl(id); if (el) el.innerHTML = htm
 const setDisp = (id, s) => { const el = getEl(id); if (el) el.style.display = s; };
 
 // ═══════ API CACHE ═══════
-async function fetchWithCache(query, cacheKey, ttlHours = 24) {
-  const cached = localStorage.getItem(cacheKey);
+async function fetchWithCache(query, cacheKey, variables = {}, ttlHours = 24) {
+  const fullCacheKey = `${cacheKey}_${currentLang}`;
+  const cached = localStorage.getItem(fullCacheKey);
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
@@ -29,15 +30,13 @@ async function fetchWithCache(query, cacheKey, ttlHours = 24) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: query.replace('lang: en', `lang: ${currentLang}`) // Dynamic language in query
-    })
+    body: JSON.stringify({ query, variables })
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data.errors) throw new Error(data.errors[0].message);
 
-  localStorage.setItem(cacheKey, JSON.stringify({
+  localStorage.setItem(fullCacheKey, JSON.stringify({
     timestamp: Date.now(),
     data: data.data
   }));
@@ -128,7 +127,100 @@ const i18n = {
     header_prog_kappa: "PROGRESO KAPPA",
     header_prog_hideout: "NIVELES CONSTRUIDOS",
     header_prog_quests: "MISIONES COMPLETADAS",
-    header_prog_valuation: "VALORACIÓN DE MERCADO"
+    header_prog_valuation: "VALORACIÓN DE MERCADO",
+    ui_level: "NIVEL", ui_requirements: "Requisitos previos", ui_objectives: "Objetivos", ui_rewards: "Recompensas",
+    ui_none: "Ninguno", ui_no_results: "No se encontraron misiones",
+    ui_mark_pending: "Marcar como pendiente", ui_mark_complete: "Marcar como completada",
+    ui_set_goal: "Fijar como objetivo", ui_back_search: "Volver a la búsqueda",
+    ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Precio por Slot", ui_best_trader: "Mejor Comerciante",
+    ui_direct_sell: "Precio de venta directo", ui_add_info: "Información Adicional", ui_base_price: "BASE PRICE",
+    ui_banned_flea: "Baneado del Flea", ui_no_flea: "Sin precio de Flea",
+    ui_detected: "DETECTADO", ui_scanner_focus: "Enfoca el nombre del item", ui_scanner_init: "Iniciando cámara...",
+    ui_scanner_ocr: "Iniciando motor OCR...", ui_scanner_realtime: "Escaneando en tiempo real...",
+    ui_all: "Todos", ui_loading: "Cargando...",
+    stat_total_items: "Total Items", stat_found: "Encontrados",
+    stat_total_levels: "Total Niveles", stat_built: "Construidos", stat_pending: "Pendientes",
+    stat_complete: "Completos", stat_missing: "Faltantes", stat_total_quests: "Total Misiones",
+    ui_back_to_stations: "Volver a Estaciones", ui_kappa_needed_title: "Items Necesarios",
+    ui_search_quest: "Buscar misión por nombre...", ui_my_level: "MI NIVEL:", ui_delete: "BORRAR",
+    ui_filter_all_f: "Todas", ui_filter_locked: "Bloqueadas", ui_filter_available: "Disponibles", ui_filter_completed: "Hechas",
+    ui_current_goal: "OBJETIVO ACTUAL", ui_clear_goal: "Quitar objetivo",
+    ui_valuation_title: "VALORACIÓN DE ITEMS", ui_valuation_desc: "Consulta el Flea Market y mejores ofertas de comerciantes",
+    ui_valuation_search: "Nombre del item (ej: Graphics Card, Tetriz...)",
+    ui_valuation_init_p: "Busca un ítem o usa la cámara para ver su valor actual",
+    ui_qty_subtitle: "¿Cuántas unidades tienes en tu inventario?", ui_qty_label: "Cantidad (de {0})",
+    ui_half: "Mitad", ui_all_f: "Todas", ui_cancel: "Cancelar", ui_save: "Guardar", ui_confirm: "Confirmar",
+    ui_login: "INICIAR SESIÓN", ui_logout: "CERRAR SESIÓN",
+    ui_profile: "PERFIL:",
+    ui_auth_sub: "Inicia sesión o crea una cuenta para guardar tu progreso",
+    ui_tab_login: "Iniciar Sesión", ui_tab_register: "Registrarse",
+    ui_username: "Usuario", ui_password: "Contraseña", ui_confirm_password: "Confirmar Contraseña",
+    ui_login_placeholder: "Tu nombre de usuario", ui_pass_placeholder: "Tu contraseña",
+    ui_reg_user_placeholder: "Elige un nombre", ui_reg_pass_placeholder: "Mínimo 4 caracteres",
+    ui_reg_pass2_placeholder: "Repite la contraseña",
+    ui_btn_enter: "ENTRAR", ui_btn_create: "CREAR CUENTA", ui_close: "CERRAR",
+    ui_wiki_link: "Ver Wiki ↗",
+    toast_inventory_removed: "{0} — eliminado del inventario",
+    toast_inventory_completed: "¡{0} completado!",
+    toast_inventory_updated: "{0} — actualizado ({1}/{2})",
+    toast_inventory_reduced: "{0} — reducido ({1}/{2})",
+    ui_no_items: "No se encontraron items",
+    ui_no_items_marked: "Aún no has marcado ningún objeto",
+    ui_kappa_banner_title: "¡KAPPA COMPLETADO!",
+    ui_kappa_banner_sub: "Has encontrado todos los items. ¡El Kappa es tuyo!",
+    ui_reload_data: "Recargar datos",
+    ui_reset_progress: "Resetear progreso",
+    ui_no_quests: "No se encontraron misiones",
+    ui_no_quests_trader: "No hay misiones para este comerciante con los filtros actuales",
+    ui_items_count: "{0} items", ui_stations_count: "{0} estaciones",
+    ui_welcome: "¡Bienvenido, {0}!",
+    ui_login_as: "Iniciando sesión como <strong>{0}</strong>",
+    ui_not_you: "¿No eres tú? Cambiar usuario",
+    ui_login_another: "Inicia sesión con otra cuenta",
+    ui_create_account_p: "Crea una cuenta nueva para guardar tu progreso",
+    ui_complete_fields: "Completa todos los campos",
+    ui_quest_lvl: "📊 Nivel: {0}+",
+    ui_quest_req: "Misión: {0}",
+    ui_quest_need: "Necesitas {0}x {1} {2}",
+    confirm_unmark_dep: "Esta misión es requisito para las siguientes misiones ya completadas:\n\n• {0}\n\n¿Quieres desmarcarlas todas como pendientes?",
+    confirm_mark_pre: "Para completar esta misión, necesitas las siguientes misiones previas:\n\n• {0}\n\n¿Quieres marcarlas todas como completadas automáticamente?",
+    toast_quest_completed_title: "¡Misión completada: {0}!",
+    ui_goal_active: "Objetivo actual",
+    ui_built_status: "✓ Construido",
+    ui_ready: "Listo",
+    ui_no_req_items: "Sin items requeridos",
+    ui_undo_built: "↩ Deshacer construcción",
+    ui_mark_built_action: "🔨 Marcar como construido",
+    ui_slots: "SLOTS",
+    ui_vendor: "VENDEDOR",
+    ui_no_flea_price: "Sin precio de Flea",
+    toast_goal_set: "Objetivo fijado",
+    confirm_replace_goal: "Ya tienes la misión \"{0}\" fijada como objetivo. ¿Deseas reemplazarla por la nueva?",
+    ui_not_available: "N/A",
+    home_subtitle: "Selecciona un módulo para continuar",
+    ui_menu: "MENÚ",
+    ui_scanner_title: "Escanear con cámara",
+    ui_scanner_close: "CERRAR ESCÁNER",
+    ui_scanner_mode: "MODO: {0}",
+    ui_mode_kappa: "KAPPA",
+    ui_mode_hideout: "REFUGIO",
+    ui_mode_valuation: "EVALUACIÓN",
+    toast_camera_error: "Error al abrir la cámara",
+    ui_camera_error: "Error: No se pudo acceder a la cámara",
+    ui_pass_mismatch: "Las contraseñas no coinciden",
+    toast_logout: "Sesión cerrada",
+    ui_you: " (Tú)",
+    toast_account_created: "Cuenta creada. ¡Bienvenido, {0}!",
+    toast_lvl_undo: "Nivel {0} — pendiente",
+    ui_no_profiles: "— Sin perfiles —",
+    toast_items_collected: "{0} — recopilado",
+    ui_error_server: "Error del servidor ({0})",
+    ui_error_login: "Error de inicio de sesión",
+    ui_error_register: "Error de registro",
+    toast_kappa_reset: "Progreso de Kappa borrado",
+    toast_hideout_reset: "Progreso de Refugio borrado",
+    toast_quests_reset: "Progreso de misiones borrado",
+    toast_scanned: "+1 {0} (Escaneado)"
   },
   en: {
     nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
@@ -149,7 +241,104 @@ const i18n = {
     header_prog_kappa: "KAPPA PROGRESS",
     header_prog_hideout: "STATIONS BUILT",
     header_prog_quests: "QUESTS COMPLETED",
-    header_prog_valuation: "MARKET VALUATION"
+    header_prog_valuation: "MARKET VALUATION",
+    ui_level: "LEVEL", ui_requirements: "Requirements", ui_objectives: "Objectives", ui_rewards: "Rewards",
+    ui_none: "None", ui_no_results: "No missions found",
+    ui_mark_pending: "Mark as pending", ui_mark_complete: "Mark as completed",
+    ui_set_goal: "Set as goal", ui_back_search: "Back to search",
+    ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Price per Slot", ui_best_trader: "Best Trader",
+    ui_direct_sell: "Direct sell price", ui_add_info: "Additional Information", ui_base_price: "BASE PRICE",
+    ui_banned_flea: "Banned from Flea", ui_no_flea: "No Flea price",
+    ui_detected: "DETECTED", ui_scanner_focus: "Focus on item name", ui_scanner_init: "Starting camera...",
+    ui_scanner_ocr: "Starting OCR engine...", ui_scanner_realtime: "Scanning in real-time...",
+    ui_all: "All", ui_loading: "Loading...",
+    stat_total_items: "Total Items", stat_found: "Found",
+    stat_total_levels: "Total Levels", stat_built: "Built", stat_pending: "Pending",
+    stat_complete: "Complete", stat_missing: "Missing", stat_total_quests: "Total Quests",
+    stat_completed: "Completed", stat_unique_items: "Unique Items", ui_search_item: "Search item...",
+    ui_loading_kappa: "Loading Kappa...", ui_loading_hideout: "Loading Hideout...", ui_loading_quests: "Loading Quests...",
+    ui_retry: "Retry", ui_stations: "Stations", ui_items_list: "Items List",
+    ui_stations_title: "Hideout Stations", ui_hideout_items_title: "Hideout Items",
+    ui_back_to_stations: "Back to Stations", ui_kappa_needed_title: "Required Items",
+    ui_search_quest: "Search quest by name...", ui_my_level: "MY LEVEL:", ui_delete: "DELETE",
+    ui_filter_all_f: "All", ui_filter_locked: "Locked", ui_filter_available: "Available", ui_filter_completed: "Done",
+    ui_current_goal: "CURRENT GOAL", ui_clear_goal: "Clear goal",
+    ui_valuation_title: "ITEM VALUATION", ui_valuation_desc: "Check Flea Market and best trader offers",
+    ui_valuation_search: "Item name (e.g. Graphics Card, Tetriz...)",
+    ui_valuation_init_p: "Search for an item or use the camera to see its current value",
+    ui_qty_subtitle: "How many units do you have in your inventory?", ui_qty_label: "Quantity (of {0})",
+    ui_half: "Half", ui_all_f: "All", ui_cancel: "Cancel", ui_save: "Save", ui_confirm: "Confirm",
+    ui_login: "LOGIN", ui_logout: "LOGOUT",
+    ui_profile: "PROFILE:",
+    ui_auth_sub: "Login or create an account to save your progress",
+    ui_tab_login: "Login", ui_tab_register: "Register",
+    ui_username: "Username", ui_password: "Password", ui_confirm_password: "Confirm Password",
+    ui_login_placeholder: "Your username", ui_pass_placeholder: "Your password",
+    ui_reg_user_placeholder: "Choose a name", ui_reg_pass_placeholder: "Min 4 characters",
+    ui_reg_pass2_placeholder: "Repeat password",
+    ui_btn_enter: "ENTER", ui_btn_create: "CREATE ACCOUNT", ui_close: "CLOSE",
+    ui_wiki_link: "View Wiki ↗",
+    toast_inventory_removed: "{0} — removed from inventory",
+    toast_inventory_completed: "{0} completed!",
+    toast_inventory_updated: "{0} — updated ({1}/{2})",
+    toast_inventory_reduced: "{0} — reduced ({1}/{2})",
+    ui_no_items: "No items found",
+    ui_no_items_marked: "You haven't marked any items yet",
+    ui_kappa_banner_title: "KAPPA COMPLETED!",
+    ui_kappa_banner_sub: "You have found all items. The Kappa is yours!",
+    ui_reload_data: "Reload data",
+    ui_reset_progress: "Reset progress",
+    ui_no_quests: "No missions found",
+    ui_no_quests_trader: "No missions for this trader with current filters",
+    ui_items_count: "{0} items", ui_stations_count: "{0} stations",
+    ui_welcome: "Welcome, {0}!",
+    ui_login_as: "Logging in as <strong>{0}</strong>",
+    ui_not_you: "Not you? Change user",
+    ui_login_another: "Login with another account",
+    ui_create_account_p: "Create a new account to save your progress",
+    ui_complete_fields: "Fill in all fields",
+    ui_quest_lvl: "📊 Level: {0}+",
+    ui_quest_req: "Quest: {0}",
+    ui_quest_need: "Need {0}x {1} {2}",
+    confirm_unmark_dep: "This quest is a requirement for the following completed quests:\n\n• {0}\n\nDo you want to unmark them all as pending?",
+    confirm_mark_pre: "To complete this quest, you need the following prerequisite quests:\n\n• {0}\n\nDo you want to mark them all as completed automatically?",
+    toast_quest_completed_title: "Quest completed: {0}!",
+    ui_goal_active: "Current goal",
+    ui_built_status: "✓ Built",
+    ui_ready: "Ready",
+    ui_no_req_items: "No required items",
+    ui_undo_built: "↩ Undo construction",
+    ui_mark_built_action: "🔨 Mark as built",
+    ui_slots: "SLOTS",
+    ui_vendor: "VENDOR",
+    ui_no_flea_price: "No Flea Price",
+    toast_goal_set: "Goal set",
+    confirm_replace_goal: "You already have \"{0}\" set as a goal. Do you want to replace it?",
+    ui_not_available: "N/A",
+    home_subtitle: "Select a module to continue",
+    ui_menu: "MENU",
+    ui_scanner_title: "Scan with camera",
+    ui_scanner_close: "CLOSE SCANNER",
+    ui_scanner_mode: "MODE: {0}",
+    ui_mode_kappa: "KAPPA",
+    ui_mode_hideout: "HIDEOUT",
+    ui_mode_valuation: "VALUATION",
+    toast_camera_error: "Error opening camera",
+    ui_camera_error: "Error: Could not access camera",
+    ui_pass_mismatch: "Passwords do not match",
+    toast_logout: "Logged out",
+    ui_you: " (You)",
+    toast_account_created: "Account created. Welcome, {0}!",
+    toast_lvl_undo: "Level {0} — pending",
+    ui_no_profiles: "— No profiles —",
+    toast_items_collected: "{0} — collected",
+    ui_error_server: "Server error ({0})",
+    ui_error_login: "Login error",
+    ui_error_register: "Registration error",
+    toast_kappa_reset: "Kappa progress reset",
+    toast_hideout_reset: "Hideout progress reset",
+    toast_quests_reset: "Quest progress reset",
+    toast_scanned: "+1 {0} (Scanned)"
   }
 };
 
@@ -170,16 +359,53 @@ function updateUI() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (i18n[currentLang][key]) {
-      el.textContent = i18n[currentLang][key];
+      // If it's an input, update placeholder
+      if (el.tagName === 'INPUT') {
+        el.placeholder = i18n[currentLang][key];
+      } else {
+        el.textContent = i18n[currentLang][key];
+      }
     }
   });
 
+  // Update elements with data-i18n-title
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (i18n[currentLang][key]) {
+      el.title = i18n[currentLang][key];
+    }
+  });
+
+  // Refresh current page dynamic headers
+  updateHeader();
+
   // Update language buttons active state
-  document.getElementById('btn-lang-es').classList.toggle('active', currentLang === 'es');
-  document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+  document.getElementById('btn-lang-es')?.classList.toggle('active', currentLang === 'es');
+  document.getElementById('btn-lang-en')?.classList.toggle('active', currentLang === 'en');
 
   // Update existing dynamic UI components
   if (currentPage === 'home') updateHomeMini();
+}
+
+function updateHeader() {
+  if (currentPage === 'home') return;
+  const logo = document.getElementById('header-logo');
+  const progLabel = document.getElementById('header-prog-label');
+  if (!logo || !progLabel) return;
+
+  if (currentPage === 'kappa') {
+    logo.innerHTML = `<img src="images/kappa_icon.webp" width="24" height="24"  style="vertical-align: middle;"> ${i18n[currentLang].nav_kappa}`;
+    progLabel.textContent = i18n[currentLang].header_prog_kappa;
+  } else if (currentPage === 'hideout') {
+    logo.innerHTML = `️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> ${i18n[currentLang].nav_hideout}`;
+    progLabel.textContent = i18n[currentLang].header_prog_hideout;
+  } else if (currentPage === 'quests') {
+    logo.innerHTML = `📜 ${i18n[currentLang].nav_quests}`;
+    progLabel.textContent = i18n[currentLang].header_prog_quests;
+  } else if (currentPage === 'valuation') {
+    logo.innerHTML = `<span style="color:#a855f7">⚖️ ${i18n[currentLang].nav_prices}</span>`;
+    progLabel.textContent = i18n[currentLang].header_prog_valuation;
+  }
 }
 
 // ═══════ STORAGE ═══════
@@ -288,12 +514,13 @@ function updateLoginFieldVisibility() {
   if (selectedProfile && !currentUser) {
     usernameInput.value = selectedProfile.username;
     userFieldContainer.style.display = 'none'; // ocultar campo de usuario
-    modalSub.innerHTML = `Iniciando sesión como <strong>${selectedProfile.username}</strong> <br> <a href="#" onclick="showUsernameField(); return false;" style="color:var(--gold); font-size:0.8rem; text-decoration:underline; margin-top:5px; display:inline-block;">¿No eres tú? Cambiar usuario</a>`;
+    modalSub.innerHTML = i18n[currentLang].ui_login_as.replace('{0}', selectedProfile.username) +
+      ` <br> <a href="#" onclick="showUsernameField(); return false;" style="color:var(--gold); font-size:0.8rem; text-decoration:underline; margin-top:5px; display:inline-block;">${i18n[currentLang].ui_not_you}</a>`;
     setTimeout(() => document.getElementById('login-password').focus(), 50);
   } else {
     usernameInput.value = '';
     userFieldContainer.style.display = 'block'; // mostrar campo de usuario
-    modalSub.textContent = 'Inicia sesión o crea una cuenta para guardar tu progreso';
+    modalSub.textContent = i18n[currentLang].ui_auth_sub;
     setTimeout(() => usernameInput.focus(), 50);
   }
 }
@@ -305,7 +532,7 @@ function showUsernameField() {
 
   usernameInput.value = '';
   userFieldContainer.style.display = 'block';
-  modalSub.textContent = 'Inicia sesión con otra cuenta';
+  modalSub.textContent = i18n[currentLang].ui_login_another;
   usernameInput.focus();
 }
 
@@ -322,7 +549,7 @@ function switchAuthTab(tab) {
   if (tab === 'login') {
     updateLoginFieldVisibility();
   } else {
-    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = 'Crea una cuenta nueva para guardar tu progreso';
+    document.getElementById('auth-modal').querySelector('.auth-modal-sub').textContent = i18n[currentLang].ui_create_account_p;
   }
 }
 
@@ -330,7 +557,7 @@ async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   document.getElementById('login-error').textContent = '';
-  if (!username || !password) { document.getElementById('login-error').textContent = 'Completa todos los campos'; return; }
+  if (!username || !password) { document.getElementById('login-error').textContent = i18n[currentLang].ui_complete_fields; return; }
   document.getElementById('btn-login').disabled = true;
   try {
     const res = await fetch('/api/login', {
@@ -343,18 +570,18 @@ async function doLogin() {
     try {
       data = await res.json();
     } catch (e) {
-      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      if (!res.ok) throw new Error(i18n[currentLang].ui_error_server.replace('{0}', res.status));
       throw e;
     }
 
-    if (!res.ok) throw new Error(data.error || 'Error de login');
+    if (!res.ok) throw new Error(data.error || i18n[currentLang].ui_error_login);
     authToken = data.token;
     currentUser = data.user;
     viewingProfileId = currentUser.id;  // ← fijar perfil propio
     isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
-    toast(`¡Bienvenido, ${currentUser.username}!`, 't-found');
+    toast(i18n[currentLang].ui_welcome.replace('{0}', currentUser.username), 't-found');
     // Load own profile data from server
     await loadProfileFromServer(currentUser.id);
     await loadAllProfiles();
@@ -372,8 +599,8 @@ async function doRegister() {
   const password = document.getElementById('register-password').value;
   const password2 = document.getElementById('register-password2').value;
   document.getElementById('register-error').textContent = '';
-  if (!username || !password || !password2) { document.getElementById('register-error').textContent = 'Completa todos los campos'; return; }
-  if (password !== password2) { document.getElementById('register-error').textContent = 'Las contraseñas no coinciden'; return; }
+  if (!username || !password || !password2) { document.getElementById('register-error').textContent = i18n[currentLang].ui_complete_fields; return; }
+  if (password !== password2) { document.getElementById('register-error').textContent = i18n[currentLang].ui_pass_mismatch; return; }
   document.getElementById('btn-register').disabled = true;
   try {
     const res = await fetch('/api/register', {
@@ -386,18 +613,18 @@ async function doRegister() {
     try {
       data = await res.json();
     } catch (e) {
-      if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
+      if (!res.ok) throw new Error(i18n[currentLang].ui_error_server.replace('{0}', res.status));
       throw e;
     }
 
-    if (!res.ok) throw new Error(data.error || 'Error de registro');
+    if (!res.ok) throw new Error(data.error || i18n[currentLang].ui_error_register);
     authToken = data.token;
     currentUser = data.user;
     viewingProfileId = currentUser.id;  // ← fijar perfil propio
     isReadOnly = false;                  // ← nunca es solo lectura propio perfil
     localStorage.setItem('eft_auth_token', authToken);
     closeAuthModal();
-    toast(`Cuenta creada. ¡Bienvenido, ${currentUser.username}!`, 't-found');
+    toast(i18n[currentLang].toast_account_created.replace('{0}', currentUser.username), 't-found');
     // Sync current local data to the new account
     await syncProfileToServerImmediate();
     await loadAllProfiles();
@@ -419,7 +646,7 @@ function logout() {
   loadKappa_storage();
   loadHideout_storage();
   loadHideoutInventory_storage();
-  toast('Sesión cerrada', 't-unfound');
+  toast(i18n[currentLang].toast_logout, 't-unfound');
   updateAuthUI();
   updateHomeMini();
   refreshCurrentPage();
@@ -490,13 +717,13 @@ function updateProfileSelectors() {
     if (!sel) return;
     sel.innerHTML = '';
     if (allProfiles.length === 0) {
-      sel.innerHTML = '<option value="">\u2014 Sin perfiles \u2014</option>';
+      sel.innerHTML = `<option value="">${i18n[currentLang].ui_no_profiles}</option>`;
       return;
     }
     allProfiles.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = p.username + (currentUser && p.id === currentUser.id ? ' (Tú)' : '');
+      opt.textContent = p.username + (currentUser && p.id === currentUser.id ? i18n[currentLang].ui_you : '');
       if (activeId && p.id == activeId) opt.selected = true;
       sel.appendChild(opt);
     });
@@ -562,7 +789,7 @@ function updateAuthUI() {
     btnAuth.style.cursor = 'default';
     btnLogout.style.display = 'inline-block';
   } else {
-    btnAuth.innerHTML = '🔑 INICIAR SESIÓN';
+    btnAuth.textContent = '🔑 ' + i18n[currentLang].ui_login;
     btnAuth.classList.remove('logged-in');
     btnAuth.onclick = openAuthModal;
     btnAuth.style.cursor = 'pointer';
@@ -622,17 +849,15 @@ function navigate(page) {
   const nHide = getEl('nav-hideout'); if (nHide) nHide.className = 'nav-tab' + (page === 'hideout' ? ' active-hideout' : '');
   const nQuest = getEl('nav-quests'); if (nQuest) nQuest.className = 'nav-tab' + (page === 'quests' ? ' active-quests' : '');
 
+  updateHeader();
+
   if (page === 'kappa') {
     const pKappa = getEl('page-kappa'); if (pKappa) pKappa.classList.add('active');
-    setHtml('header-logo', '<img src="images/kappa_icon.webp" width="24" height="24"  style="vertical-align: middle;">  KAPPA');
-    setTxt('header-prog-label', i18n[currentLang].header_prog_kappa);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = '';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill';
     if (!kappaItems.length) loadKappa(); else { updateKappaStats(); renderKappa(); }
   } else if (page === 'hideout') {
     const pHide = getEl('page-hideout'); if (pHide) pHide.classList.add('active');
-    setHtml('header-logo', '️<img src="images/hideout_icon.png" width="24" height="24" style="vertical-align: middle;"> ' + i18n[currentLang].nav_hideout);
-    setTxt('header-prog-label', i18n[currentLang].header_prog_hideout);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'blue';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill blue';
     if (!hideoutStations.length) loadHideout(); else {
@@ -641,16 +866,12 @@ function navigate(page) {
     }
   } else if (page === 'quests') {
     const pQuest = getEl('page-quests'); if (pQuest) pQuest.classList.add('active');
-    setHtml('header-logo', '📜 ' + i18n[currentLang].nav_quests);
-    setTxt('header-prog-label', i18n[currentLang].header_prog_quests);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'yellow';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill yellow';
     if (!quests.length) loadQuests(); else { updateQuestStats(); renderQuests(); }
   } else if (page === 'valuation') {
     const pValuation = getEl('page-valuation'); if (pValuation) pValuation.classList.add('active');
     const nVal = getEl('nav-valuation'); if (nVal) nVal.className = 'nav-tab active-valuation';
-    setHtml('header-logo', '<span style="color:#a855f7">⚖️ ' + i18n[currentLang].nav_prices + '</span>');
-    setTxt('header-prog-label', i18n[currentLang].header_prog_valuation);
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'valuation';
     const hFill = getEl('header-prog-fill'); if (hFill) { hFill.className = 'prog-bar-fill valuation'; hFill.style.background = '#a855f7'; hFill.style.width = '100%'; }
   }
@@ -669,14 +890,14 @@ function toast(text, type = 't-found') {
 // ═══════════════════════════════
 // KAPPA MODULE
 // ═══════════════════════════════
-const KAPPA_QUERY = `{ tasks(lang: en) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
+const KAPPA_QUERY = `query GetKappa($lang: LanguageCode) { tasks(lang: $lang) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
 
 async function loadKappa() {
   setDisp('k-loading', 'flex');
   setDisp('k-error', 'none');
   setDisp('k-content', 'none');
   try {
-    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa');
+    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang });
     const tasks = data.tasks;
     let collector = tasks.find(t => t.name === 'The Collector');
     if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
@@ -707,7 +928,7 @@ function updateHomeMini() {
   const kPct = kTotal > 0 ? Math.min(100, (kFound / kTotal) * 100) : 0;
 
   const hKappaLabel = document.getElementById('home-kappa-label');
-  if (hKappaLabel) hKappaLabel.textContent = kTotal > 0 ? `${kFound} / ${kTotal}` : 'Cargando...';
+  if (hKappaLabel) hKappaLabel.textContent = kTotal > 0 ? `${kFound} / ${kTotal}` : i18n[currentLang].ui_loading;
   const hKappaFill = document.getElementById('home-kappa-fill');
   if (hKappaFill) hKappaFill.style.width = kPct + '%';
 
@@ -762,9 +983,9 @@ function renderKappa() {
     return ms && mf;
   });
   const elCount = document.getElementById('k-count');
-  if (elCount) elCount.textContent = `${filtered.length} items`;
+  if (elCount) elCount.textContent = i18n[currentLang].ui_items_count.replace('{0}', filtered.length);
   if (!filtered.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${kappaFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${kappaFilter === 'found' ? 'Aún no has marcado ningún item' : 'No se encontraron items'}</div></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${kappaFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${kappaFilter === 'found' ? i18n[currentLang].ui_no_items_marked : i18n[currentLang].ui_no_items}</div></div>`;
     return;
   }
   grid.innerHTML = filtered.map(item => {
@@ -786,12 +1007,12 @@ function renderKappa() {
 }
 
 function toggleKappa(id) {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   const wasFound = kappaFound.has(id);
   const item = kappaItems.find(i => i.id === id);
   if (!item) return;
-  if (wasFound) { kappaFound.delete(id); toast(`${item.name} — pendiente`, 't-unfound'); }
-  else { kappaFound.add(id); toast(`¡${item.shortName || item.name} encontrado!`, 't-found'); }
+  if (wasFound) { kappaFound.delete(id); toast(i18n[currentLang].toast_quest_pending.replace('{0}', item.name), 't-unfound'); }
+  else { kappaFound.add(id); toast(i18n[currentLang].toast_quest_completed.replace('{0}', item.shortName || item.name), 't-found'); }
   saveKappa();
   updateKappaStats();
   const card = document.querySelector(`.item-card[data-id="${id}"]`);
@@ -817,14 +1038,14 @@ document.querySelectorAll('#page-kappa .filter-tab').forEach(tab => {
 // ═══════════════════════════════
 // HIDEOUT MODULE
 // ═══════════════════════════════
-const HIDEOUT_QUERY = `{ hideoutStations(lang: en) { id name levels { id level itemRequirements { item { id name shortName iconLink } count } } } }`;
+const HIDEOUT_QUERY = `query GetHideout($lang: LanguageCode) { hideoutStations(lang: $lang) { id name levels { id level itemRequirements { item { id name shortName iconLink } count } } } }`;
 
 async function loadHideout() {
   setDisp('h-loading', 'flex');
   setDisp('h-error', 'none');
   setDisp('h-content', 'none');
   try {
-    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout');
+    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout', { lang: currentLang });
     hideoutStations = data.hideoutStations
       .filter(s => s.levels && s.levels.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -932,10 +1153,10 @@ function renderHideoutItemsView() {
   });
 
   const elCount = document.getElementById('hi-count');
-  if (elCount) elCount.textContent = `${filtered.length} items`;
+  if (elCount) elCount.textContent = i18n[currentLang].ui_items_count.replace('{0}', filtered.length);
 
   if (!filtered.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${hideoutItemsFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${hideoutItemsFilter === 'found' ? 'Aún no has completado ningún item' : 'No se encontraron items'}</div></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${hideoutItemsFilter === 'found' ? '🎉' : '🔍'}</div><div class="empty-state-text">${hideoutItemsFilter === 'found' ? i18n[currentLang].ui_no_items_marked : i18n[currentLang].ui_no_items}</div></div>`;
     return;
   }
 
@@ -974,7 +1195,7 @@ function openQuantityModal(itemId) {
   const currentQty = getInventoryQty(itemId);
 
   document.getElementById('modal-item-name').textContent = item.name;
-  document.getElementById('modal-max-qty').textContent = item.totalCount;
+  document.getElementById('modal-qty-label-raw').textContent = i18n[currentLang].ui_qty_label.replace('{0}', item.totalCount);
   document.getElementById('modal-qty-input').value = currentQty;
   document.getElementById('modal-qty-input').max = item.totalCount;
 
@@ -1003,7 +1224,7 @@ function setModalQuantity(value) {
 
 function confirmQuantityModal() {
   if (!currentModalItem) return;
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); closeQuantityModal(); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); closeQuantityModal(); return; }
 
   const input = document.getElementById('modal-qty-input');
   let qty = parseInt(input.value) || 0;
@@ -1023,13 +1244,13 @@ function confirmQuantityModal() {
 
   // Toast notification
   if (qty === 0 && oldQty > 0) {
-    toast(`${currentModalItem.name} — eliminado del inventario`, 't-unfound');
+    toast(i18n[currentLang].toast_inventory_removed.replace('{0}', currentModalItem.name), 't-unfound');
   } else if (qty >= currentModalItem.totalCount) {
-    toast(`¡${currentModalItem.shortName || currentModalItem.name} completado!`, 't-found');
+    toast(i18n[currentLang].toast_inventory_completed.replace('{0}', currentModalItem.shortName || currentModalItem.name), 't-found');
   } else if (qty > oldQty) {
-    toast(`${currentModalItem.name} — actualizado (${qty}/${currentModalItem.totalCount})`, 't-built');
+    toast(i18n[currentLang].toast_inventory_updated.replace('{0}', currentModalItem.name).replace('{1}', qty).replace('{2}', currentModalItem.totalCount), 't-built');
   } else if (qty < oldQty) {
-    toast(`${currentModalItem.name} — reducido (${qty}/${currentModalItem.totalCount})`, 't-built');
+    toast(i18n[currentLang].toast_inventory_reduced.replace('{0}', currentModalItem.name).replace('{1}', qty).replace('{2}', currentModalItem.totalCount), 't-built');
   }
 
   closeQuantityModal();
@@ -1135,7 +1356,7 @@ function renderStationsGrid() {
   const elGrid = document.getElementById('h-stations-grid');
   if (!elGrid) return;
   const elCount = document.getElementById('h-stations-count');
-  if (elCount) elCount.textContent = `${hideoutStations.length} estaciones`;
+  if (elCount) elCount.textContent = i18n[currentLang].ui_stations_count.replace('{0}', hideoutStations.length);
   elGrid.innerHTML = hideoutStations.map(s => {
     const max = s.levels.length;
     const done = getStationBuiltCount(s);
@@ -1144,7 +1365,7 @@ function renderStationsGrid() {
     return `<div class="station-card${allBuilt ? ' all-built' : ''}" onclick="openStation('${s.id}')">
       <span class="st-icon"><img src="images/${stationIcon(s.name)}"</img></span>
       <div class="st-name">${s.name}</div>
-      <div class="st-prog-label"><span>Nivel</span><span>${done}/${max}</span></div>
+      <div class="st-prog-label"><span>${i18n[currentLang].ui_level}</span><span>${done}/${max}</span></div>
       <div class="st-prog-bar"><div class="st-prog-fill" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
@@ -1163,7 +1384,7 @@ function openStation(stationId) {
   if (elName) elName.textContent = selectedStation.name;
   const done = getStationBuiltCount(selectedStation);
   const elSub = document.getElementById('detail-sub');
-  if (elSub) elSub.textContent = `${done} de ${selectedStation.levels.length} niveles construidos`;
+  if (elSub) elSub.textContent = `${done} / ${selectedStation.levels.length} ${i18n[currentLang].header_prog_hideout.toLowerCase()}`;
   renderLevels();
 }
 
@@ -1188,15 +1409,15 @@ function renderLevels() {
     const markedCount = items.filter(req => isReqMarked(selectedStation.id, lv.level, req.item.id)).length;
 
     let statusHtml = '';
-    if (built) statusHtml = `<span class="level-badge-built">✓ Construido</span>`;
-    else if (allItemsMarked && items.length > 0) statusHtml = `<span class="level-badge-ready">Listo</span>`;
-    else statusHtml = `<span class="level-progress-mini">${markedCount}/${items.length} items</span>`;
+    if (built) statusHtml = `<span class="level-badge-built">${i18n[currentLang].ui_built_status}</span>`;
+    else if (allItemsMarked && items.length > 0) statusHtml = `<span class="level-badge-ready">${i18n[currentLang].ui_ready}</span>`;
+    else statusHtml = `<span class="level-progress-mini">${i18n[currentLang].ui_items_count.replace('{0}', markedCount + '/' + items.length)}</span>`;
 
     return `<div class="level-section${built ? ' level-built' : ''}${locked ? ' level-locked' : ''}" id="level-sec-${lv.level}">
       <div class="level-header" onclick="toggleLevelBody(${lv.level})">
         <div class="level-label">
-          <span class="level-num">NIVEL ${lv.level}</span>
-          <span class="level-items-count">${items.length} items</span>
+          <span class="level-num">${i18n[currentLang].ui_level} ${lv.level}</span>
+          <span class="level-items-count">${i18n[currentLang].ui_items_count.replace('{0}', items.length)}</span>
         </div>
         <div class="level-status">
           ${statusHtml}
@@ -1204,12 +1425,12 @@ function renderLevels() {
         </div>
       </div>
       <div class="level-body" id="lvbody-${lv.level}">
-        ${items.length === 0 ? '<div style="padding:.5rem 0;color:var(--text3);font-size:.85rem">Sin items requeridos</div>' :
+        ${items.length === 0 ? `<div style="padding:.5rem 0;color:var(--text3);font-size:.85rem">${i18n[currentLang].ui_no_req_items}</div>` :
         `<div class="level-items-grid">${items.map(req => renderLevelItem(selectedStation.id, lv.level, req)).join('')}</div>`}
         <div class="level-actions">
           ${built
-        ? `<button class="btn-mark-built mark-undo" onclick="toggleLevelBuilt('${selectedStation.id}',${lv.level},false)">↩ Deshacer construcción</button>`
-        : `<button class="btn-mark-built mark-done" onclick="toggleLevelBuilt('${selectedStation.id}',${lv.level},true)">🔨 Marcar como construido</button>`}
+        ? `<button class="btn-mark-built mark-undo" onclick="toggleLevelBuilt('${selectedStation.id}',${lv.level},false)">${i18n[currentLang].ui_undo_built}</button>`
+        : `<button class="btn-mark-built mark-done" onclick="toggleLevelBuilt('${selectedStation.id}',${lv.level},true)">${i18n[currentLang].ui_mark_built_action}</button>`}
         </div>
       </div>
     </div>`;
@@ -1239,7 +1460,7 @@ function toggleReqItem(stationId, level, itemId, itemName) {
   if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   const key = reqItemKey(stationId, level, itemId);
   if (hideoutBuilt.has(key)) hideoutBuilt.delete(key);
-  else { hideoutBuilt.add(key); toast(`${itemName} — recopilado`, 't-built'); }
+  else { hideoutBuilt.add(key); toast(i18n[currentLang].toast_items_collected.replace('{0}', itemName), 't-built'); }
   saveHideout();
   updateHideoutStats();
   renderLevels();
@@ -1247,7 +1468,7 @@ function toggleReqItem(stationId, level, itemId, itemName) {
 }
 
 function toggleLevelBuilt(stationId, level, markBuilt) {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   const key = builtKey(stationId, level);
   const station = hideoutStations.find(s => s.id === stationId);
   if (markBuilt) {
@@ -1256,10 +1477,10 @@ function toggleLevelBuilt(stationId, level, markBuilt) {
       const lv = station.levels.find(l => l.level === level);
       if (lv) lv.itemRequirements.forEach(req => hideoutBuilt.add(reqItemKey(stationId, level, req.item.id)));
     }
-    toast(`Nivel ${level} de ${station?.name || ''} construido`, 't-built');
+    toast(`${i18n[currentLang].ui_level} ${level} — ${station?.name || ''} ${i18n[currentLang].stat_built.toLowerCase()}`, 't-built');
   } else {
     hideoutBuilt.delete(key);
-    toast(`Nivel ${level} — en construcción`, 't-unfound');
+    toast(i18n[currentLang].toast_lvl_undo.replace('{0}', level), 't-unfound');
   }
   saveHideout();
   // Recalcular items consolidados (excluye niveles construidos)
@@ -1289,7 +1510,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   if (currentPage === 'kappa') {
     if (!confirm(i18n[currentLang].confirm_reset_kappa)) return;
-    kappaFound.clear(); saveKappa(); updateKappaStats(); renderKappa(); toast('Kappa progress reset', 't-unfound');
+    kappaFound.clear(); saveKappa(); updateKappaStats(); renderKappa(); toast(i18n[currentLang].toast_kappa_reset, 't-unfound');
   } else if (currentPage === 'hideout') {
     if (!confirm(i18n[currentLang].confirm_reset_hideout)) return;
     hideoutBuilt.clear();
@@ -1306,7 +1527,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     } else {
       renderStationsGrid();
     }
-    toast('Progreso Refugio reseteado', 't-unfound');
+    toast(i18n[currentLang].toast_hideout_reset, 't-unfound');
   }
   updateHomeMini();
 });
@@ -1321,7 +1542,7 @@ document.getElementById('btn-reset-quests')?.addEventListener('click', () => {
   renderQuests();
   renderQuestTarget();
   updateHomeMini();
-  toast('Progreso de misiones borrado', 't-unfound');
+  toast(i18n[currentLang].toast_quests_reset, 't-unfound');
 });
 
 // ═══════════════════════════════════════════════════
@@ -1336,7 +1557,7 @@ let scannerCooldown = 0;
 
 async function initTesseract() {
   if (tesseractWorker) return;
-  document.getElementById('scanner-status').textContent = 'Iniciando motor OCR...';
+  document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_ocr;
   tesseractWorker = await Tesseract.createWorker();
   await tesseractWorker.loadLanguage('eng');
   await tesseractWorker.initialize('eng');
@@ -1344,13 +1565,16 @@ async function initTesseract() {
 }
 
 async function startScanner(mode) {
-  if (isReadOnly && mode !== 'valuation') { toast('Solo lectura — cambia a tu perfil para escanear', 't-unfound'); return; }
+  if (isReadOnly && mode !== 'valuation') { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   scannerMode = mode;
   scannerActive = true;
   document.getElementById('scanner-modal').classList.add('active');
-  document.getElementById('scanner-type-label').textContent = `MODO: ${mode.toUpperCase()}`;
-  document.getElementById('scanner-match-name').textContent = 'Enfoca el nombre del item';
-  document.getElementById('scanner-status').textContent = 'Iniciando cámara...';
+
+  const modeName = i18n[currentLang][`ui_mode_${mode}`] || mode.toUpperCase();
+  document.getElementById('scanner-type-label').textContent = i18n[currentLang].ui_scanner_mode.replace('{0}', modeName);
+
+  document.getElementById('scanner-match-name').textContent = i18n[currentLang].ui_scanner_focus;
+  document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_init;
 
   try {
     const constraints = {
@@ -1365,12 +1589,12 @@ async function startScanner(mode) {
     video.srcObject = scannerStream;
 
     await initTesseract();
-    document.getElementById('scanner-status').textContent = 'Escaneando en tiempo real...';
+    document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
     requestAnimationFrame(scannerLoop);
   } catch (err) {
     console.error('Error cámara:', err);
-    document.getElementById('scanner-status').textContent = 'Error: No se pudo acceder a la cámara';
-    toast('Error al abrir la cámara', 't-unfound');
+    document.getElementById('scanner-status').textContent = i18n[currentLang].ui_camera_error;
+    toast(i18n[currentLang].toast_camera_error, 't-unfound');
   }
 }
 
@@ -1463,7 +1687,7 @@ function matchAndMark(text) {
 
   if (bestMatch && bestScore > 0.4) {
     const display = document.getElementById('scanner-match-name');
-    display.textContent = `DETECTADO: ${bestMatch.name}`;
+    display.textContent = `${i18n[currentLang].ui_detected}: ${bestMatch.name}`;
 
     // Si la coincidencia es muy alta, marcar automáticamente
     if (bestScore > 0.7) {
@@ -1499,7 +1723,7 @@ function markHideoutItemAuto(item) {
   hideoutItemsInventory[item.id] = next;
   saveHideoutInventory();
   renderHideoutItemsView();
-  toast(`+1 ${item.shortName || item.name} (Escaneado)`, 't-built');
+  toast(i18n[currentLang].toast_scanned.replace('{0}', item.shortName || item.name), 't-built');
 }
 
 function visualFeedback(success) {
@@ -1515,8 +1739,8 @@ function visualFeedback(success) {
 // ═══════════════════════════════
 // QUEST MODULE
 // ═══════════════════════════════
-const QUESTS_QUERY = `{
-  tasks(lang: en) {
+const QUESTS_QUERY = `query GetQuests($lang: LanguageCode) {
+  tasks(lang: $lang) {
     id name minPlayerLevel experience
     trader { id name imageLink }
     taskRequirements { task { id name } status }
@@ -1536,7 +1760,7 @@ async function loadQuests() {
   setDisp('q-error', 'none');
   setDisp('q-content', 'none');
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: QUESTS_QUERY }) });
+    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: QUESTS_QUERY, variables: { lang: currentLang } }) });
     const data = await res.json();
     if (data.errors) throw new Error(data.errors[0].message);
 
@@ -1591,7 +1815,7 @@ function renderTraderFilters() {
     return getTraderWeight(a.name) - getTraderWeight(b.name);
   });
 
-  let html = `<div class="trader-btn ${activeTraderFilter === 'all' ? 'active' : ''}" onclick="filterByTrader('all')">Todos</div>`;
+  let html = `<div class="trader-btn ${activeTraderFilter === 'all' ? 'active' : ''}" onclick="filterByTrader('all')">${i18n[currentLang].ui_all}</div>`;
   sortedTraders.forEach(t => {
     html += `<div class="trader-btn ${activeTraderFilter === t.id ? 'active' : ''}" onclick="filterByTrader('${t.id}')">
       <img src="${t.imageLink}" onerror="this.src='images/trader_placeholder.webp'">
@@ -1666,7 +1890,7 @@ function renderQuests() {
   });
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state">No se encontraron misiones</div>`;
+    list.innerHTML = `<div class="empty-state">${i18n[currentLang].ui_no_results}</div>`;
     return;
   }
 
@@ -1686,7 +1910,7 @@ function renderQuests() {
         <div class="quest-item-level">LVL ${quest.minPlayerLevel || 1}</div>
         <button class="btn-quest-target ${isTarget ? 'active' : ''}" 
                 onclick="event.stopPropagation(); setQuestGoal('${quest.id}')" 
-                title="${isTarget ? 'Objetivo actual' : 'Fijar como objetivo'}">
+                title="${isTarget ? i18n[currentLang].ui_goal_active : i18n[currentLang].ui_set_goal}">
           🎯
         </button>
       </div>
@@ -1704,14 +1928,14 @@ function showQuestDetail(questId) {
 
   let reqsHtml = '';
   if (quest.minPlayerLevel > 1) {
-    reqsHtml += `<div class="q-req-item met">📊 Nivel del personaje: ${quest.minPlayerLevel}+</div>`;
+    reqsHtml += `<div class="q-req-item met">${i18n[currentLang].ui_quest_lvl.replace('{0}', quest.minPlayerLevel)}</div>`;
   }
   if (quest.taskRequirements && quest.taskRequirements.length) {
     quest.taskRequirements.forEach(r => {
       if (!r.task) return;
       const met = questsCompleted.has(r.task.id);
       reqsHtml += `<div class="q-req-item ${met ? 'met' : 'not-met'}">
-        ${met ? '✅' : '❌'} Misión: ${r.task.name}
+        ${met ? '✅' : '❌'} ${i18n[currentLang].ui_quest_req.replace('{0}', r.task.name)}
       </div>`;
     });
   }
@@ -1724,7 +1948,7 @@ function showQuestDetail(questId) {
         ${isItem ? `<img src="${o.item.iconLink}" class="q-obj-img">` : '<span style="font-size:1.5rem">🎯</span>'}
         <div>
           <div style="font-size:0.9rem">${o.description}</div>
-          ${isItem ? `<div style="font-size:0.75rem; color:var(--text3)">Necesitas ${o.count}x ${o.item.name} ${o.foundInRaid ? '(FIR)' : ''}</div>` : ''}
+          ${isItem ? `<div style="font-size:0.75rem; color:var(--text3)">${i18n[currentLang].ui_quest_need.replace('{0}', o.count).replace('{1}', o.item.name).replace('{2}', o.foundInRaid ? '(FIR)' : '')}</div>` : ''}
         </div>
       </div>`;
     });
@@ -1759,32 +1983,32 @@ function showQuestDetail(questId) {
           <span>${quest.trader.name}</span>
         </div>
       </div>
-      <div class="quest-item-level" style="font-size:1.2rem">NIVEL ${quest.minPlayerLevel || 1}</div>
+      <div class="quest-item-level" style="font-size:1.2rem">${i18n[currentLang].ui_level} ${quest.minPlayerLevel || 1}</div>
     </div>
     
     <div class="q-req-box">
-      <div class="q-req-title">Requisitos previos</div>
+      <div class="q-req-title">${i18n[currentLang].ui_requirements}</div>
       <div class="q-req-list">
-        ${reqsHtml || '<div class="q-req-item met">Sin requisitos previos</div>'}
+        ${reqsHtml || `<div class="q-req-item met">${i18n[currentLang].ui_none}</div>`}
       </div>
     </div>
     
     <div class="q-obj-section">
-      <div class="q-obj-title">Objetivos</div>
-      <div class="q-obj-list">${objHtml || 'No hay objetivos listados'}</div>
+      <div class="q-obj-title">${i18n[currentLang].ui_objectives}</div>
+      <div class="q-obj-list">${objHtml || i18n[currentLang].ui_none}</div>
     </div>
     
     <div class="q-obj-section">
-      <div class="q-obj-title">Recompensas</div>
-      <div class="q-reward-grid">${rewardHtml || 'No hay recompensas listadas'}</div>
+      <div class="q-obj-title">${i18n[currentLang].ui_rewards}</div>
+      <div class="q-reward-grid">${rewardHtml || i18n[currentLang].ui_none}</div>
     </div>
     
     <div style="display:flex; gap:1rem; margin-top:2rem">
       <button class="btn-toggle-quest ${isComp ? 'pending' : 'complete'}" style="flex:1" onclick="toggleQuest('${quest.id}')">
-        ${isComp ? 'Marcar como pendiente' : 'Marcar como completada'}
+        ${isComp ? i18n[currentLang].ui_mark_pending : i18n[currentLang].ui_mark_complete}
       </button>
       <button class="btn btn-ghost" style="border:1px solid var(--accent); color:var(--accent)" onclick="setQuestGoal('${quest.id}')">
-        🎯 Fijar como objetivo
+        🎯 ${i18n[currentLang].ui_set_goal}
       </button>
     </div>
   `;
@@ -1798,7 +2022,7 @@ function closeQuestDetail() {
 }
 
 function toggleQuest(id) {
-  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
   const quest = quests.find(q => q.id === id);
   if (!quest) return;
 
@@ -1807,25 +2031,25 @@ function toggleQuest(id) {
     const dependents = findRecursiveDependents(id);
     if (dependents.length > 0) {
       const names = dependents.map(q => q.name).join('\n• ');
-      if (!confirm(`Esta misión es requisito para las siguientes misiones ya completadas:\n\n• ${names}\n\n¿Quieres desmarcarlas todas como pendientes?`)) {
+      if (!confirm(i18n[currentLang].confirm_unmark_dep.replace('{0}', names))) {
         return;
       }
       dependents.forEach(q => questsCompleted.delete(q.id));
     }
     questsCompleted.delete(id);
-    toast(`${quest.name} — pendiente`, 't-unfound');
+    toast(i18n[currentLang].toast_quest_pending.replace('{0}', quest.name), 't-unfound');
   } else {
     // MARKING AS COMPLETED
     const prerequisites = findRecursivePrerequisites(id);
     if (prerequisites.length > 0) {
       const names = prerequisites.map(q => q.name).join('\n• ');
-      if (!confirm(`Para completar esta misión, necesitas las siguientes misiones previas:\n\n• ${names}\n\n¿Quieres marcarlas todas como completadas automáticamente?`)) {
+      if (!confirm(i18n[currentLang].confirm_mark_pre.replace('{0}', names))) {
         return;
       }
       prerequisites.forEach(q => questsCompleted.add(q.id));
     }
     questsCompleted.add(id);
-    toast(`¡Misión completada: ${quest.name}!`, 't-found');
+    toast(i18n[currentLang].toast_quest_completed_title.replace('{0}', quest.name), 't-found');
   }
 
   saveQuests();
@@ -1882,7 +2106,7 @@ function setQuestGoal(id) {
 
   if (targetQuestId && targetQuestId !== id) {
     const oldQuest = quests.find(q => q.id === targetQuestId);
-    if (!confirm(`Ya tienes la misión "${oldQuest ? oldQuest.name : '???'}" fijada como objetivo. ¿Deseas reemplazarla por la nueva?`)) {
+    if (!confirm(i18n[currentLang].confirm_replace_goal.replace('{0}', oldQuest ? oldQuest.name : '???'))) {
       return;
     }
   }
@@ -1891,7 +2115,7 @@ function setQuestGoal(id) {
   renderQuestTarget();
   saveQuests();
   renderQuests(); // Refresh icons in list
-  toast('Objetivo fijado', 't-found');
+  toast(i18n[currentLang].toast_goal_set, 't-found');
   closeQuestDetail();
 }
 
@@ -1994,7 +2218,7 @@ function renderValuationResults() {
   getEl('v-item-detail').style.display = 'none';
 
   if (valuationSearchResults.length === 0) {
-    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">No se encontraron ítems</div>';
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">${i18n[currentLang].ui_none}</div>`;
     return;
   }
 
@@ -2003,7 +2227,7 @@ function renderValuationResults() {
       <img src="${item.iconLink}" class="v-item-icon" onerror="this.src='images/item_placeholder.webp'">
       <div style="flex:1">
         <div class="item-name" style="font-size:0.9rem">${item.name}</div>
-        <div style="font-size:0.75rem; color:var(--text2)">${item.avg24hPrice ? formatRoubles(item.avg24hPrice) : 'No Flea Price'}</div>
+        <div style="font-size:0.75rem; color:var(--text2)">${item.avg24hPrice ? formatRoubles(item.avg24hPrice) : i18n[currentLang].ui_no_flea_price}</div>
       </div>
     </div>
   `).join('');
@@ -2025,42 +2249,42 @@ function showValuationDetail(itemId) {
   const fleaPrice = item.avg24hPrice;
 
   detail.innerHTML = `
-    <button class="detail-back" onclick="closeValuationDetail()" style="color:#a855f7">← Volver a la búsqueda</button>
+    <button class="detail-back" onclick="closeValuationDetail()" style="color:#a855f7">← ${i18n[currentLang].ui_back_search}</button>
     <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
       <img src="${item.iconLink}" style="width:80px; height:80px; background:#000; padding:10px; border-radius:12px; border:1px solid var(--border);">
       <div>
         <h2 style="font-family:'Rajdhani'; color:var(--text);">${item.name}</h2>
-        <div style="color:var(--text3); font-size:0.8rem; text-transform:uppercase;">${item.width}x${item.height} SLOTS</div>
+        <div style="color:var(--text3); font-size:0.8rem; text-transform:uppercase;">${item.width}x${item.height} ${i18n[currentLang].ui_slots}</div>
       </div>
     </div>
 
     <div class="v-price-card">
       <div>
-        <div class="v-price-label">Flea Market (Avg 24h)</div>
-        <div class="v-price-value v-flea">${fleaPrice ? formatRoubles(fleaPrice) : '<span class="v-banned">Baneado del Flea</span>'}</div>
+        <div class="v-price-label">${i18n[currentLang].ui_flea_market}</div>
+        <div class="v-price-value v-flea">${fleaPrice ? formatRoubles(fleaPrice) : `<span class="v-banned">${i18n[currentLang].ui_banned_flea}</span>`}</div>
       </div>
       <div style="text-align:right">
-        <div class="v-price-label">Precio por Slot</div>
+        <div class="v-price-label">${i18n[currentLang].ui_per_slot}</div>
         <div class="v-price-value" style="font-size:1.2rem; opacity:0.7;">${fleaPrice ? formatRoubles(Math.round(fleaPrice / (item.width * item.height))) : '-'}</div>
       </div>
     </div>
 
     <div class="v-price-card" style="margin-top:1rem;">
       <div>
-        <div class="v-price-label">Mejor Comerciante</div>
-        <div class="v-price-value v-trader">${bestTrader ? formatRoubles(bestTrader.price) : 'N/A'}</div>
+        <div class="v-price-label">${i18n[currentLang].ui_best_trader}</div>
+        <div class="v-price-value v-trader">${bestTrader ? formatRoubles(bestTrader.price) : i18n[currentLang].ui_not_available}</div>
       </div>
       <div style="text-align:right">
-        <div class="v-price-label">${bestTrader ? bestTrader.source.toUpperCase() : 'VENDOR'}</div>
-        <div style="font-size:0.8rem; color:var(--text3);">Precio de venta directo</div>
+        <div class="v-price-label">${bestTrader ? bestTrader.source.toUpperCase() : i18n[currentLang].ui_vendor}</div>
+        <div style="font-size:0.8rem; color:var(--text3);">${i18n[currentLang].ui_direct_sell}</div>
       </div>
     </div>
 
     <div style="margin-top:2rem; padding:1rem; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid var(--border);">
-       <div class="v-price-label" style="text-align:center;">Información Adicional</div>
+       <div class="v-price-label" style="text-align:center;">${i18n[currentLang].ui_add_info}</div>
        <div style="display:flex; justify-content:space-around; margin-top:10px;">
-          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">BASE PRICE</div><div style="font-weight:600;">${formatRoubles(item.basePrice)}</div></div>
-          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">WIKI</div><div><a href="https://escapefromtarkov.fandom.com/wiki/${item.name.replace(/ /g, '_')}" target="_blank" style="color:#a855f7; font-size:0.8rem;">Ver Wiki ↗</a></div></div>
+          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">${i18n[currentLang].ui_base_price}</div><div style="font-weight:600;">${formatRoubles(item.basePrice)}</div></div>
+          <div style="text-align:center"><div style="color:var(--text3); font-size:0.7rem;">WIKI</div><div><a href="https://escapefromtarkov.fandom.com/wiki/${item.name.replace(/ /g, '_')}" target="_blank" style="color:#a855f7; font-size:0.8rem;">${i18n[currentLang].ui_wiki_link}</a></div></div>
        </div>
     </div>
   `;

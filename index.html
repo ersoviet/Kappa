@@ -3000,20 +3000,21 @@
         <div class="home-header">
             <div class="home-eyebrow">Escape from Tarkov</div>
             <div class="home-title">EFT TRACKER</div>
-            <div class="home-subtitle">Selecciona un módulo para continuar</div>
+            <div class="home-subtitle" data-i18n="home_subtitle">Selecciona un módulo para continuar</div>
         </div>
 
         <!-- Profile Section -->
         <div class="profile-section" id="home-profile-section">
-            <span class="profile-label">PERFIL:</span>
+            <span class="profile-label" data-i18n="ui_profile">PERFIL:</span>
             <div class="profile-select-wrapper">
                 <select class="profile-select" id="home-profile-select" onchange="switchProfile(this.value)">
                     <option value="">— Sin perfiles —</option>
                 </select>
             </div>
-            <button class="btn-auth" id="btn-auth-home" onclick="openAuthModal()">🔑 INICIAR SESIÓN</button>
-            <button class="btn-logout" id="btn-logout-home" onclick="logout()" style="display:none">CERRAR
+            <button class="btn-auth" id="btn-auth-home" onclick="openAuthModal()" data-i18n="ui_login">🔑 INICIAR
                 SESIÓN</button>
+            <button class="btn-logout" id="btn-logout-home" onclick="logout()" style="display:none"
+                data-i18n="ui_logout">CERRAR SESIÓN</button>
         </div>
 
         <div class="module-cards">
@@ -3073,7 +3074,7 @@
     <!-- ═══════════════════════ SHARED HEADER ═══════════════════════ -->
     <header id="app-header">
         <div class="header-inner">
-            <button class="btn-home" onclick="navigate('home')">← MENÚ</button>
+            <button class="btn-home" onclick="navigate('home')" data-i18n="ui_menu">← MENÚ</button>
             <nav class="nav-tabs">
                 <div class="logo-text" id="header-logo">EFT</div>
                 <button class="nav-tab" id="nav-kappa" onclick="navigate('kappa')">
@@ -3107,8 +3108,10 @@
                     <button class="btn-lang" id="btn-lang-es" onclick="changeLanguage('es')">🇪🇸</button>
                     <button class="btn-lang" id="btn-lang-en" onclick="changeLanguage('en')">🇺🇸</button>
                 </div>
-                <button class="btn btn-ghost" id="btn-reload">↻</button>
-                <button class="btn btn-ghost" id="btn-reset">☐</button>
+                <button class="btn btn-ghost" id="btn-reload" data-i18n-title="ui_reload_data"
+                    title="Recargar datos">↻</button>
+                <button class="btn btn-ghost" id="btn-reset" data-i18n-title="ui_reset_progress"
+                    title="Resetear progreso">☐</button>
             </div>
         </div>
     </header>
@@ -3118,19 +3121,21 @@
         <div class="mod-page">
             <div class="loading-screen" id="k-loading">
                 <div class="loader"></div>
-                <div class="loading-text">Cargando items de Kappa...</div>
+                <div class="loading-text" data-i18n="ui_loading_kappa">Cargando Kappa...</div>
             </div>
             <div class="error-screen" id="k-error" style="display:none">
                 <div style="font-size:2.5rem">⚠️</div>
                 <div class="error-text" id="k-error-msg"></div>
-                <button class="btn btn-ghost" onclick="loadKappa()" style="margin-top:1rem">Reintentar</button>
+                <button class="btn btn-ghost" onclick="loadKappa()" style="margin-top:1rem"
+                    data-i18n="ui_retry">Reintentar</button>
             </div>
             <div id="k-content" style="display:none">
                 <div class="complete-banner" id="k-banner" style="display:none">
                     <div class="banner-icon">🏆</div>
                     <div>
-                        <div class="banner-title">¡KAPPA COMPLETADO!</div>
-                        <div class="banner-sub">Has encontrado todos los items. ¡El Kappa es tuyo!</div>
+                        <div class="banner-title" data-i18n="ui_kappa_banner_title">¡KAPPA COMPLETADO!</div>
+                        <div class="banner-sub" data-i18n="ui_kappa_banner_sub">Has encontrado todos los items. ¡El
+                            Kappa es tuyo!</div>
                     </div>
                 </div>
                 <div class="stats-bar">
@@ -3138,38 +3143,40 @@
                         <div class="stat-icon total">📦</div>
                         <div>
                             <div class="stat-number total" id="k-total">0</div>
-                            <div class="stat-label">Total Items</div>
+                            <div class="stat-label" data-i18n="stat_total_items">Total Items</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon found">✅</div>
                         <div>
                             <div class="stat-number found" id="k-found">0</div>
-                            <div class="stat-label">Encontrados</div>
+                            <div class="stat-label" data-i18n="stat_found">Encontrados</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon remaining">⏳</div>
                         <div>
                             <div class="stat-number remaining" id="k-remaining">0</div>
-                            <div class="stat-label">Pendientes</div>
+                            <div class="stat-label" data-i18n="stat_pending">Pendientes</div>
                         </div>
                     </div>
                 </div>
                 <div class="toolbar">
                     <div class="search-box">
                         <span class="search-icon">🔍</span>
-                        <input type="text" id="k-search" placeholder="Buscar item..." />
+                        <input type="text" id="k-search" placeholder="Buscar item..." data-i18n="ui_search_item" />
                     </div>
-                    <button class="btn-scanner" onclick="startScanner('kappa')" title="Escanear con cámara">📷</button>
+                    <button class="btn-scanner" onclick="startScanner('kappa')" data-i18n-title="ui_scanner_title"
+                        title="Escanear con cámara">📷</button>
                     <div class="filter-tabs">
-                        <button class="filter-tab active" data-filter="all">Todos</button>
-                        <button class="filter-tab found-tab" data-filter="found">Encontrados</button>
-                        <button class="filter-tab" data-filter="missing">Pendientes</button>
+                        <button class="filter-tab active" data-filter="all" data-i18n="ui_all">Todos</button>
+                        <button class="filter-tab found-tab" data-filter="found"
+                            data-i18n="home_stats_found">Encontrados</button>
+                        <button class="filter-tab" data-filter="missing" data-i18n="stat_pending">Pendientes</button>
                     </div>
                 </div>
                 <div class="section-header">
-                    <span class="section-title">Items Necesarios</span>
+                    <span class="section-title" data-i18n="ui_kappa_needed_title">Items Necesarios</span>
                     <div class="section-line"></div>
                     <span class="section-count" id="k-count">0 items</span>
                 </div>
@@ -3183,21 +3190,24 @@
         <div class="mod-page">
             <div class="loading-screen" id="h-loading">
                 <div class="loader blue-loader"></div>
-                <div class="loading-text">Cargando Refugio...</div>
+                <div class="loading-text" data-i18n="ui_loading_hideout">Cargando Refugio...</div>
             </div>
             <div class="error-screen" id="h-error" style="display:none">
                 <div style="font-size:2.5rem">⚠️</div>
                 <div class="error-text" id="h-error-msg"></div>
-                <button class="btn btn-ghost" onclick="loadHideout()" style="margin-top:1rem">Reintentar</button>
+                <button class="btn btn-ghost" onclick="loadHideout()" style="margin-top:1rem"
+                    data-i18n="ui_retry">Reintentar</button>
             </div>
             <div id="h-content" style="display:none">
 
                 <!-- View Tabs -->
                 <div class="hideout-view-tabs">
-                    <button class="hideout-view-tab active" id="tab-stations" onclick="switchHideoutView('stations')">
+                    <button class="hideout-view-tab active" id="tab-stations" onclick="switchHideoutView('stations')"
+                        data-i18n="ui_stations">
                         🏚️ Estaciones
                     </button>
-                    <button class="hideout-view-tab" id="tab-items" onclick="switchHideoutView('items')">
+                    <button class="hideout-view-tab" id="tab-items" onclick="switchHideoutView('items')"
+                        data-i18n="ui_items_list">
                         📦 Lista de Items
                     </button>
                 </div>
@@ -3209,26 +3219,26 @@
                             <div class="stat-icon total">🏚️</div>
                             <div>
                                 <div class="stat-number total" id="h-total">0</div>
-                                <div class="stat-label">Total Niveles</div>
+                                <div class="stat-label" data-i18n="stat_total_levels">Total Niveles</div>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon built">🔨</div>
                             <div>
                                 <div class="stat-number built" id="h-built">0</div>
-                                <div class="stat-label">Construidos</div>
+                                <div class="stat-label" data-i18n="stat_built">Construidos</div>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon remaining">⏳</div>
                             <div>
                                 <div class="stat-number remaining" id="h-remaining">0</div>
-                                <div class="stat-label">Pendientes</div>
+                                <div class="stat-label" data-i18n="stat_pending">Pendientes</div>
                             </div>
                         </div>
                     </div>
                     <div class="section-header">
-                        <span class="section-title">Estaciones del Refugio</span>
+                        <span class="section-title" data-i18n="ui_stations_title">Estaciones del Refugio</span>
                         <div class="section-line"></div>
                         <span class="section-count" id="h-stations-count">0 estaciones</span>
                     </div>
@@ -3242,40 +3252,42 @@
                             <div class="stat-icon total">📦</div>
                             <div>
                                 <div class="stat-number total" id="hi-total">0</div>
-                                <div class="stat-label">Items Únicos</div>
+                                <div class="stat-label" data-i18n="stat_unique_items">Items Únicos</div>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon found">✅</div>
                             <div>
                                 <div class="stat-number found" id="hi-found">0</div>
-                                <div class="stat-label">Completos</div>
+                                <div class="stat-label" data-i18n="stat_complete">Completos</div>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon remaining">⏳</div>
                             <div>
                                 <div class="stat-number remaining" id="hi-remaining">0</div>
-                                <div class="stat-label">Faltantes</div>
+                                <div class="stat-label" data-i18n="stat_missing">Faltantes</div>
                             </div>
                         </div>
                     </div>
                     <div class="toolbar">
                         <div class="search-box">
                             <span class="search-icon">🔍</span>
-                            <input type="text" id="hi-search" placeholder="Buscar item..." />
+                            <input type="text" id="hi-search" placeholder="Buscar item..." data-i18n="ui_search_item" />
                         </div>
-                        <button class="btn-scanner" onclick="startScanner('hideout')"
+                        <button class="btn-scanner" onclick="startScanner('hideout')" data-i18n-title="ui_scanner_title"
                             title="Escanear con cámara">📷</button>
                         <div class="filter-tabs">
-                            <button class="filter-tab active" data-filter="all" id="hi-filter-all">Todos</button>
-                            <button class="filter-tab found-tab" data-filter="found"
-                                id="hi-filter-found">Completos</button>
-                            <button class="filter-tab" data-filter="missing" id="hi-filter-missing">Faltantes</button>
+                            <button class="filter-tab active" data-filter="all" id="hi-filter-all"
+                                data-i18n="ui_all">Todos</button>
+                            <button class="filter-tab found-tab" data-filter="found" id="hi-filter-found"
+                                data-i18n="stat_complete">Completos</button>
+                            <button class="filter-tab" data-filter="missing" id="hi-filter-missing"
+                                data-i18n="stat_missing">Faltantes</button>
                         </div>
                     </div>
                     <div class="section-header">
-                        <span class="section-title">Items del Refugio</span>
+                        <span class="section-title" data-i18n="ui_hideout_items_title">Items del Refugio</span>
                         <div class="section-line"></div>
                         <span class="section-count" id="hi-count">0 items</span>
                     </div>
@@ -3284,7 +3296,8 @@
 
                 <!-- Station Detail View -->
                 <div id="h-detail-view" style="display:none">
-                    <button class="detail-back" onclick="showStationsView()">← Volver a Estaciones</button>
+                    <button class="detail-back" onclick="showStationsView()" data-i18n="ui_back_to_stations">← Volver a
+                        Estaciones</button>
                     <div class="detail-header">
                         <span class="detail-station-icon" id="detail-icon"></span>
                         <div>
@@ -3306,21 +3319,21 @@
                     <div class="stat-icon total">📜</div>
                     <div>
                         <div id="q-total" class="stat-number total">0</div>
-                        <div class="stat-label">Total Misiones</div>
+                        <div class="stat-label" data-i18n="stat_total_quests">Total Misiones</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon found">✓</div>
                     <div>
                         <div id="q-completed" class="stat-number found">0</div>
-                        <div class="stat-label">Completadas</div>
+                        <div class="stat-label" data-i18n="stat_completed">Completadas</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon remaining">⏳</div>
                     <div>
                         <div id="q-remaining" class="stat-number remaining">0</div>
-                        <div class="stat-label">Pendientes</div>
+                        <div class="stat-label" data-i18n="stat_pending">Pendientes</div>
                     </div>
                 </div>
             </div>
@@ -3328,29 +3341,37 @@
             <div class="toolbar">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="q-search" placeholder="Buscar misión por nombre..." />
+                    <input type="text" id="q-search" placeholder="Buscar misión por nombre..."
+                        data-i18n="ui_search_quest" />
                 </div>
                 <div style="display:flex; align-items:center; gap:.5rem">
-                    <div class="stat-label" style="margin:0; font-size:.7rem; opacity:.7">MI NIVEL:</div>
+                    <div class="stat-label" style="margin:0; font-size:.7rem; opacity:.7" data-i18n="ui_my_level">MI
+                        NIVEL:</div>
                     <input type="number" id="player-level-input" value="1" min="1" max="80" class="level-input">
                 </div>
-                <button class="btn btn-ghost" id="btn-reset-quests" title="Borrar todo el progreso de misiones"
-                    style="color:var(--red); border-color:rgba(248,113,113,0.3)">
+                <button class="btn btn-ghost" id="btn-reset-quests" data-i18n-title="ui_reset_progress"
+                    title="Borrar todo el progreso de misiones"
+                    style="color:var(--red); border-color:rgba(248,113,113,0.3)" data-i18n="ui_delete">
                     🗑️ BORRAR
                 </button>
                 <div class="filter-tabs">
-                    <div id="q-filter-all" class="filter-tab active" data-filter="all">Todas</div>
-                    <div id="q-filter-missing" class="filter-tab" data-filter="locked">Bloqueadas</div>
-                    <div id="q-filter-available" class="filter-tab" data-filter="available">Disponibles</div>
-                    <div id="q-filter-completed" class="filter-tab" data-filter="completed">Hechas</div>
+                    <div id="q-filter-all" class="filter-tab active" data-filter="all" data-i18n="ui_filter_all_f">Todas
+                    </div>
+                    <div id="q-filter-missing" class="filter-tab" data-filter="locked" data-i18n="ui_filter_locked">
+                        Bloqueadas</div>
+                    <div id="q-filter-available" class="filter-tab" data-filter="available"
+                        data-i18n="ui_filter_available">Disponibles</div>
+                    <div id="q-filter-completed" class="filter-tab" data-filter="completed"
+                        data-i18n="ui_filter_completed">Hechas</div>
                 </div>
             </div>
 
             <!-- Target Quest Display -->
             <div id="q-target-area" class="q-target-area" style="display:none">
                 <div class="q-target-header">
-                    <div class="q-target-label">🎯 OBJETIVO ACTUAL</div>
-                    <button class="btn-clear-target" onclick="setQuestGoal(null)">Quitar objetivo</button>
+                    <div class="q-target-label" data-i18n="ui_current_goal">🎯 OBJETIVO ACTUAL</div>
+                    <button class="btn-clear-target" onclick="setQuestGoal(null)" data-i18n="ui_clear_goal">Quitar
+                        objetivo</button>
                 </div>
                 <div class="q-target-content" id="q-target-content">
                     <!-- Path visualization -->
@@ -3364,13 +3385,13 @@
 
             <div id="q-loading" class="loading-screen">
                 <div class="loader yellow-loader"></div>
-                <div class="loading-text">Cargando misiones...</div>
+                <div class="loading-text" data-i18n="ui_loading_quests">Cargando misiones...</div>
             </div>
 
             <div id="q-error" class="error-screen" style="display:none">
                 <div style="font-size:3rem">⚠️</div>
-                <div id="q-error-msg" class="error-text">Error al conectar con la API</div>
-                <button class="btn-home" onclick="loadQuests()">Reintentar</button>
+                <div id="q-error-msg" class="error-text" data-i18n="toast_error_api">Error al conectar con la API</div>
+                <button class="btn-home" onclick="loadQuests()" data-i18n="ui_retry">Reintentar</button>
             </div>
 
             <div id="q-content" style="display:none">
@@ -3385,20 +3406,20 @@
     <div id="page-valuation" class="page">
         <div class="mod-page">
             <div class="valuation-header" style="text-align:center; margin-bottom:2rem;">
-                <h1 style="font-family:'Rajdhani'; color:#a855f7; font-size:2.5rem; letter-spacing:2px;">VALORACIÓN DE
-                    ITEMS</h1>
-                <p style="color:var(--text2); font-size:0.9rem;">Consulta el Flea Market y mejores ofertas de
-                    comerciantes</p>
+                <h1 style="font-family:'Rajdhani'; color:#a855f7; font-size:2.5rem; letter-spacing:2px;"
+                    data-i18n="ui_valuation_title">VALORACIÓN DE ITEMS</h1>
+                <p style="color:var(--text2); font-size:0.9rem;" data-i18n="ui_valuation_desc">Consulta el Flea Market y
+                    mejores ofertas de comerciantes</p>
             </div>
 
             <div class="toolbar" style="max-width:800px; margin: 0 auto 2rem;">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="v-search" placeholder="Nombre del item (ej: Graphics Card, Tetriz...)"
-                        oninput="searchValuationItems(this.value)" />
+                        data-i18n="ui_valuation_search" oninput="searchValuationItems(this.value)" />
                 </div>
-                <button class="btn-scanner" onclick="startScanner('valuation')" title="Escanear con cámara"
-                    style="background:#a855f7; border-color:#a855f7;">📷</button>
+                <button class="btn-scanner" onclick="startScanner('valuation')" data-i18n-title="ui_scanner_title"
+                    title="Escanear con cámara" style="background:#a855f7; border-color:#a855f7;">📷</button>
             </div>
 
             <div id="v-search-results" class="v-search-results">
@@ -3411,7 +3432,7 @@
 
             <div id="v-initial-state" style="text-align:center; padding:4rem 0; opacity:0.5;">
                 <div style="font-size:4rem; margin-bottom:1rem;">⚖️</div>
-                <p>Busca un ítem o usa la cámara para ver su valor actual</p>
+                <p data-i18n="ui_valuation_init_p">Busca un ítem o usa la cámara para ver su valor actual</p>
             </div>
         </div>
     </div>
@@ -3430,19 +3451,24 @@
     <div class="modal-overlay" id="qty-modal">
         <div class="modal-box">
             <div class="modal-title" id="modal-item-name">Item</div>
-            <div class="modal-subtitle">¿Cuántas unidades tienes en tu inventario?</div>
+            <div class="modal-subtitle" data-i18n="ui_qty_subtitle">¿Cuántas unidades tienes en tu inventario?</div>
             <div class="modal-input-group">
-                <label class="modal-label">Cantidad (de <span id="modal-max-qty">0</span>)</label>
+                <label class="modal-label" id="modal-qty-label-raw">Cantidad (de <span
+                        id="modal-max-qty">0</span>)</label>
                 <input type="number" class="modal-input" id="modal-qty-input" min="0" value="0">
                 <div class="modal-quick-btns">
                     <button class="modal-quick-btn" onclick="setModalQuantity(0)">0</button>
-                    <button class="modal-quick-btn" onclick="setModalQuantity('half')">Mitad</button>
-                    <button class="modal-quick-btn" onclick="setModalQuantity('max')">Todas</button>
+                    <button class="modal-quick-btn" onclick="setModalQuantity('half')"
+                        data-i18n="ui_half">Mitad</button>
+                    <button class="modal-quick-btn" onclick="setModalQuantity('max')"
+                        data-i18n="ui_all_f">Todas</button>
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="modal-btn modal-btn-cancel" onclick="closeQuantityModal()">Cancelar</button>
-                <button class="modal-btn modal-btn-confirm" onclick="confirmQuantityModal()">Confirmar</button>
+                <button class="modal-btn modal-btn-cancel" onclick="closeQuantityModal()"
+                    data-i18n="ui_cancel">Cancelar</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmQuantityModal()"
+                    data-i18n="ui_confirm">Confirmar</button>
             </div>
         </div>
     </div>
@@ -3453,45 +3479,52 @@
     <div class="auth-modal-overlay" id="auth-modal">
         <div class="auth-modal">
             <div class="auth-modal-title">EFT TRACKER</div>
-            <div class="auth-modal-sub">Inicia sesión o crea una cuenta para guardar tu progreso</div>
+            <div class="auth-modal-sub" data-i18n="ui_auth_sub">Inicia sesión o crea una cuenta para guardar tu progreso
+            </div>
             <div class="auth-tabs">
-                <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Iniciar
+                <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')"
+                    data-i18n="ui_tab_login">Iniciar
                     Sesión</button>
-                <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Registrarse</button>
+                <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')"
+                    data-i18n="ui_tab_register">Registrarse</button>
             </div>
             <div id="auth-form-login">
                 <div class="auth-field">
-                    <label>Usuario</label>
-                    <input type="text" id="login-username" placeholder="Tu nombre de usuario" autocomplete="username">
+                    <label data-i18n="ui_username">Usuario</label>
+                    <input type="text" id="login-username" placeholder="Tu nombre de usuario"
+                        data-i18n="ui_login_placeholder" autocomplete="username">
                 </div>
                 <div class="auth-field">
-                    <label>Contraseña</label>
+                    <label data-i18n="ui_password">Contraseña</label>
                     <input type="password" id="login-password" placeholder="Tu contraseña"
-                        autocomplete="current-password">
+                        data-i18n="ui_pass_placeholder" autocomplete="current-password">
                 </div>
                 <div class="auth-error" id="login-error"></div>
-                <button class="auth-submit" id="btn-login" onclick="doLogin()">ENTRAR</button>
+                <button class="auth-submit" id="btn-login" onclick="doLogin()" data-i18n="ui_btn_enter">ENTRAR</button>
             </div>
             <div id="auth-form-register" style="display:none">
                 <div class="auth-field">
-                    <label>Usuario</label>
-                    <input type="text" id="register-username" placeholder="Elige un nombre" autocomplete="username">
+                    <label data-i18n="ui_username">Usuario</label>
+                    <input type="text" id="register-username" placeholder="Elige un nombre"
+                        data-i18n="ui_reg_user_placeholder" autocomplete="username">
                 </div>
                 <div class="auth-field">
-                    <label>Contraseña</label>
+                    <label data-i18n="ui_password">Contraseña</label>
                     <input type="password" id="register-password" placeholder="Mínimo 4 caracteres"
-                        autocomplete="new-password">
+                        data-i18n="ui_reg_pass_placeholder" autocomplete="new-password">
                 </div>
                 <div class="auth-field">
-                    <label>Confirmar Contraseña</label>
+                    <label data-i18n="ui_confirm_password">Confirmar Contraseña</label>
                     <input type="password" id="register-password2" placeholder="Repite la contraseña"
-                        autocomplete="new-password">
+                        data-i18n="ui_reg_pass2_placeholder" autocomplete="new-password">
                 </div>
                 <div class="auth-error" id="register-error"></div>
-                <button class="auth-submit" id="btn-register" onclick="doRegister()">CREAR CUENTA</button>
+                <button class="auth-submit" id="btn-register" onclick="doRegister()" data-i18n="ui_btn_create">CREAR
+                    CUENTA</button>
             </div>
             <div style="text-align:center;margin-top:1rem">
-                <button class="btn-auth" onclick="closeAuthModal()" style="font-size:.75rem">✕ CERRAR</button>
+                <button class="btn-auth" onclick="closeAuthModal()" style="font-size:.75rem" data-i18n="ui_close">✕
+                    CERRAR</button>
             </div>
         </div>
     </div>
@@ -3517,10 +3550,12 @@
             <div class="scanner-log" id="scanner-log"></div>
         </div>
         <div class="scanner-footer">
-            <div class="scanner-status" id="scanner-status">Preparando cámara...</div>
-            <div class="scanner-match" id="scanner-match-name">Enfoca el nombre del item</div>
+            <div class="scanner-status" id="scanner-status" data-i18n="ui_scanner_init">Preparando cámara...</div>
+            <div class="scanner-match" id="scanner-match-name" data-i18n="ui_scanner_focus">Enfoca el nombre del item
+            </div>
             <div style="margin-top:1.5rem">
-                <button class="btn-scanner-close" onclick="stopScanner()">CERRAR ESCÁNER</button>
+                <button class="btn-scanner-close" onclick="stopScanner()" data-i18n="ui_scanner_close">CERRAR
+                    ESCÁNER</button>
             </div>
         </div>
         <!-- Hidden canvas for OCR -->
