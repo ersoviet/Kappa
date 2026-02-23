@@ -177,7 +177,8 @@ app.post('/api/login', (req, res) => {
 app.get('/api/profiles', (req, res) => {
     const profiles = getAll(`
     SELECT u.id, u.username, u.created_at,
-           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.updated_at
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, 
+           p.player_level, p.target_quest_id, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     ORDER BY u.username
@@ -201,7 +202,8 @@ app.get('/api/profiles', (req, res) => {
 app.get('/api/profiles/:id', (req, res) => {
     const profile = getRow(`
     SELECT u.id, u.username, u.created_at,
-           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.updated_at
+           p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, 
+           p.player_level, p.target_quest_id, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     WHERE u.id = ?
@@ -227,12 +229,8 @@ app.get('/api/profiles/:id', (req, res) => {
 
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
-<<<<<<< HEAD
-    const { kappa_found, hideout_built, hideout_inventory, quests_completed, player_level, target_quest_id } = req.body;
-=======
     try {
-        const { kappa_found, hideout_built, hideout_inventory } = req.body;
->>>>>>> b2ff43e2091eb0b0854aeee43c65a646ae20bc99
+        const { kappa_found, hideout_built, hideout_inventory, quests_completed, player_level, target_quest_id } = req.body;
 
         const sets = [];
         const params = [];
@@ -249,6 +247,18 @@ app.put('/api/profile', authenticateToken, (req, res) => {
             sets.push('hideout_inventory = ?');
             params.push(JSON.stringify(hideout_inventory));
         }
+        if (quests_completed !== undefined) {
+            sets.push('quests_completed = ?');
+            params.push(JSON.stringify(quests_completed));
+        }
+        if (player_level !== undefined) {
+            sets.push('player_level = ?');
+            params.push(player_level);
+        }
+        if (target_quest_id !== undefined) {
+            sets.push('target_quest_id = ?');
+            params.push(target_quest_id);
+        }
 
         if (sets.length === 0) {
             return res.status(400).json({ error: 'No hay datos para actualizar' });
@@ -264,40 +274,6 @@ app.put('/api/profile', authenticateToken, (req, res) => {
         console.error('Update profile error:', err);
         res.status(500).json({ error: 'Error al actualizar el perfil' });
     }
-<<<<<<< HEAD
-    if (hideout_built !== undefined) {
-        sets.push('hideout_built = ?');
-        params.push(JSON.stringify(hideout_built));
-    }
-    if (hideout_inventory !== undefined) {
-        sets.push('hideout_inventory = ?');
-        params.push(JSON.stringify(hideout_inventory));
-    }
-    if (quests_completed !== undefined) {
-        sets.push('quests_completed = ?');
-        params.push(JSON.stringify(quests_completed));
-    }
-    if (player_level !== undefined) {
-        sets.push('player_level = ?');
-        params.push(player_level);
-    }
-    if (target_quest_id !== undefined) {
-        sets.push('target_quest_id = ?');
-        params.push(target_quest_id);
-    }
-
-    if (sets.length === 0) {
-        return res.status(400).json({ error: 'No hay datos para actualizar' });
-    }
-
-    sets.push("updated_at = datetime('now')");
-    params.push(req.user.id);
-
-    db.run(`UPDATE profiles SET ${sets.join(', ')} WHERE user_id = ?`, params);
-    saveDB();
-    res.json({ success: true });
-=======
->>>>>>> b2ff43e2091eb0b0854aeee43c65a646ae20bc99
 });
 
 // Get current user info

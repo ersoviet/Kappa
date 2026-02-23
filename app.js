@@ -382,7 +382,7 @@ async function loadProfileFromServer(profileId) {
       level: playerLevel,
       target: targetQuestId
     }));
-    localStorage.setItem(QUEST_STORAGE, JSON.stringify([...questsCompleted]));
+
   } catch (e) {
     console.warn('Error loading profile:', e);
   }
@@ -437,6 +437,10 @@ async function switchProfile(profileId) {
     hideoutBuilt = new Set(profile.hideout_built || []);
     hideoutItemsInventory = profile.hideout_inventory || {};
     questsCompleted = new Set(profile.quests_completed || []);
+    playerLevel = profile.player_level || 1;
+    targetQuestId = profile.target_quest_id || null;
+    if (getEl('player-level-input')) getEl('player-level-input').value = playerLevel;
+    renderQuestTarget();
   } else {
     await loadProfileFromServer(profileId);
   }
