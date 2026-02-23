@@ -1221,6 +1221,19 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   updateHomeMini();
 });
 
+document.getElementById('btn-reset-quests')?.addEventListener('click', () => {
+  if (isReadOnly) { toast('Solo lectura — este no es tu perfil', 't-unfound'); return; }
+  if (!confirm('¿Estás seguro de que deseas borrar TODO el progreso de misiones? Esta acción no se puede deshacer.')) return;
+  questsCompleted.clear();
+  targetQuestId = null;
+  saveQuests();
+  updateQuestStats();
+  renderQuests();
+  renderQuestTarget();
+  updateHomeMini();
+  toast('Progreso de misiones borrado', 't-unfound');
+});
+
 // ═══════════════════════════════════════════════════
 // OCR SCANNER MODULE
 // ═══════════════════════════════════════════════════
@@ -1686,21 +1699,72 @@ function toggleQuest(id) {
   if (!quest) return;
 
   if (questsCompleted.has(id)) {
+    // UNMARKING AS COMPLETED
+    const dependents = findRecursiveDependents(id);
+    if (dependents.length > 0) {
+      const names = dependents.map(q => q.name).join('\n• ');
+      if (!confirm(`Esta misión es requisito para las siguientes misiones ya completadas:\n\n• ${names}\n\n¿Quieres desmarcarlas todas como pendientes?`)) {
+        return;
+      }
+      dependents.forEach(q => questsCompleted.delete(q.id));
+    }
     questsCompleted.delete(id);
     toast(`${quest.name} — pendiente`, 't-unfound');
   } else {
+    // MARKING AS COMPLETED
+    const prerequisites = findRecursivePrerequisites(id);
+    if (prerequisites.length > 0) {
+      const names = prerequisites.map(q => q.name).join('\n• ');
+      if (!confirm(`Para completar esta misión, necesitas las siguientes misiones previas:\n\n• ${names}\n\n¿Quieres marcarlas todas como completadas automáticamente?`)) {
+        return;
+      }
+      prerequisites.forEach(q => questsCompleted.add(q.id));
+    }
     questsCompleted.add(id);
     toast(`¡Misión completada: ${quest.name}!`, 't-found');
-    // Also mark as built if it was selected
   }
 
   saveQuests();
   updateQuestStats();
   renderQuests();
   updateHomeMini();
-  if (selectedQuest && selectedQuest.id === id) {
-    showQuestDetail(id); // Refresh detail
+  if (selectedQuest) {
+    showQuestDetail(selectedQuest.id);
   }
+}
+
+function findRecursivePrerequisites(questId, list = []) {
+  const quest = quests.find(q => q.id === questId);
+  if (!quest || !quest.taskRequirements) return list;
+
+  quest.taskRequirements.forEach(req => {
+    if (req.task && !questsCompleted.has(req.task.id)) {
+      if (!list.some(q => q.id === req.task.id)) {
+        const reqQuest = quests.find(q => q.id === req.task.id);
+        if (reqQuest) {
+          findRecursivePrerequisites(req.task.id, list);
+          list.push(reqQuest);
+        }
+      }
+    }
+  });
+  return list;
+}
+
+function findRecursiveDependents(questId, list = []) {
+  const directDependents = quests.filter(q =>
+    questsCompleted.has(q.id) &&
+    q.taskRequirements &&
+    q.taskRequirements.some(req => req.task && req.task.id === questId)
+  );
+
+  directDependents.forEach(dep => {
+    if (!list.some(q => q.id === dep.id)) {
+      list.push(dep);
+      findRecursiveDependents(dep.id, list);
+    }
+  });
+  return list;
 }
 
 function setQuestGoal(id) {
