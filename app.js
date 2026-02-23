@@ -1899,7 +1899,7 @@ function renderQuests() {
 
     let mf = true;
     if (questFilter === 'completed') mf = isComp;
-    else if (questFilter === 'available') mf = !isComp && isAvail;
+    else if (questFilter === 'active') mf = isActive || (!isComp && !isAvail);
     else if (questFilter === 'locked') mf = !isComp && !isAvail;
 
     return ms && mt && mf;
