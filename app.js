@@ -988,8 +988,8 @@ function updateHomeMini() {
     : [...kappaFound].length;
   const kPct = kTotal > 0 ? Math.min(100, (kFound / kTotal) * 100) : 0;
 
-  const hKappaLabel = document.getElementById('home-kappa-label');
-  if (hKappaLabel) hKappaLabel.textContent = kTotal > 0 ? `${kFound} / ${kTotal}` : i18n[currentLang].ui_loading;
+  const hKappaPct = document.getElementById('home-kappa-pct');
+  if (hKappaPct) hKappaPct.textContent = kTotal > 0 ? Math.round(kPct) + '%' : i18n[currentLang].ui_loading;
   const hKappaFill = document.getElementById('home-kappa-fill');
   if (hKappaFill) hKappaFill.style.width = kPct + '%';
 
