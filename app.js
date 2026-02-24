@@ -1819,7 +1819,7 @@ function visualFeedback(success) {
 // ═══════════════════════════════
 const QUESTS_QUERY = `query GetQuests($lang: LanguageCode, $gameMode: GameMode) {
   tasks(lang: $lang, gameMode: $gameMode) {
-    id name minPlayerLevel experience kappa
+    id name minPlayerLevel experience kappaRequired
     trader { id name imageLink }
     map { id name normalizedName }
     taskRequirements { task { id name } status }
@@ -2138,7 +2138,7 @@ function renderKappaFlowchart() {
   const container = document.getElementById('q-flow-tree');
   if (!container) return;
 
-  const kappaQuests = quests.filter(q => q.kappa);
+  const kappaQuests = quests.filter(q => q.kappaRequired);
   if (!kappaQuests.length) {
     container.innerHTML = '<div class="empty-state">No se encontraron misiones de Kappa</div>';
     return;
