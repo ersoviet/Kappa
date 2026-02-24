@@ -1696,25 +1696,37 @@ async function scannerLoop() {
 
 async function processFrame() {
   const video = document.getElementById('scanner-video');
-  const canvas = document.getElementById('scanner-canvas');
-  if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  const frame = document.querySelector('.scanner-frame');
+  if (!video || !frame || video.readyState !== video.HAVE_ENOUGH_DATA) return;
 
   scannerProcessing = true;
 
-  // Configurar canvas para captura (recorte central)
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
+  const rect = frame.getBoundingClientRect();
+  const videoRect = video.getBoundingClientRect();
+
+  // Mapping screen coordinates to video coordinates (considering object-fit: cover)
+  const scale = Math.max(videoRect.width / videoWidth, videoRect.height / videoHeight);
+  const renderedWidth = videoWidth * scale;
+  const renderedHeight = videoHeight * scale;
+
+  const offsetX = (renderedWidth - videoRect.width) / 2;
+  const offsetY = (renderedHeight - videoRect.height) / 2;
+
+  const cropX = (rect.left - videoRect.left + offsetX) / scale;
+  const cropY = (rect.top - videoRect.top + offsetY) / scale;
+  const cropWidth = rect.width / scale;
+  const cropHeight = rect.height / scale;
+
+  const canvas = document.getElementById('scanner-canvas');
   const ctx = canvas.getContext('2d');
-  const dpr = 1.5; // Escalar un poco para mejor precisión
+  const dpr = 2.0;
 
-  // Definir área de interés (el frame visual)
-  const frameWidth = video.videoWidth * 0.8;
-  const frameHeight = 120 * (video.videoHeight / video.offsetHeight);
-  const startX = (video.videoWidth - frameWidth) / 2;
-  const startY = (video.videoHeight - frameHeight) / 2;
+  canvas.width = cropWidth * dpr;
+  canvas.height = cropHeight * dpr;
 
-  canvas.width = frameWidth * dpr;
-  canvas.height = frameHeight * dpr;
-
-  ctx.drawImage(video, startX, startY, frameWidth, frameHeight, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
 
   try {
     const { data: { text } } = await tesseractWorker.recognize(canvas);
@@ -1736,9 +1748,6 @@ function matchAndMark(text) {
   else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
   else if (scannerMode === 'quests_active') candidates = quests;
   else if (scannerMode === 'valuation') {
-    // For valuation, we might need a broader list, but let's use kappaItems + consolidated
-    // or better, if we have a full item list cached somewhere.
-    // For now, let's merge the ones we have.
     candidates = [...kappaItems, ...consolidatedHideoutItems];
   }
   let bestMatch = null;
@@ -1746,8 +1755,6 @@ function matchAndMark(text) {
 
   candidates.forEach(item => {
     const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, '');
-
-    // Búsqueda simple de subcadena o similitud
     if (text.includes(itemName) || itemName.includes(text)) {
       const score = Math.max(text.length / itemName.length, itemName.length / text.length);
       if (score > bestScore) {
@@ -1761,12 +1768,11 @@ function matchAndMark(text) {
     const display = document.getElementById('scanner-match-name');
     display.textContent = `${i18n[currentLang].ui_detected}: ${bestMatch.name}`;
 
-    // Si la coincidencia es muy alta, marcar automáticamente
     if (bestScore > 0.7) {
       if (scannerMode === 'kappa') {
         if (!kappaFound.has(bestMatch.id)) {
           toggleKappa(bestMatch.id);
-          scannerCooldown = 60; // Pausa para feedback
+          scannerCooldown = 60;
           visualFeedback(true);
         }
       } else if (scannerMode === 'hideout') {
@@ -1777,7 +1783,6 @@ function matchAndMark(text) {
           visualFeedback(true);
         }
       } else if (scannerMode === 'valuation') {
-        // In valuation mode, we search and show the detail
         stopScanner();
         getEl('v-search').value = bestMatch.name;
         searchValuationItems(bestMatch.name).then(() => {
@@ -1806,6 +1811,7 @@ function markHideoutItemAuto(item) {
 
 function visualFeedback(success) {
   const frame = document.querySelector('.scanner-frame');
+  if (!frame) return;
   frame.style.borderColor = success ? 'var(--green)' : 'var(--red)';
   frame.style.boxShadow = success ? '0 0 30px var(--green)' : '0 0 30px var(--red)';
   setTimeout(() => {
