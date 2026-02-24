@@ -17,7 +17,7 @@ const setDisp = (id, s) => { const el = getEl(id); if (el) el.style.display = s;
 
 // ═══════ API CACHE ═══════
 async function fetchWithCache(query, cacheKey, variables = {}, ttlHours = 24) {
-  const fullCacheKey = `${cacheKey}_${currentLang}`;
+  const fullCacheKey = `${cacheKey}_${currentLang}_${gameMode}`;
   const cached = localStorage.getItem(fullCacheKey);
   if (cached) {
     try {
@@ -62,6 +62,7 @@ function stationIcon(name) { return STATION_ICONS[name] || '🏗️'; }
 
 // ═══════ STATE ═══════
 let currentPage = 'home';
+let gameMode = localStorage.getItem('eft_game_mode') || 'regular'; // 'regular' (PvP) or 'pve'
 let kappaItems = [];
 let kappaFound = new Set();
 let kappaFilter = 'all';
@@ -222,7 +223,10 @@ const i18n = {
     toast_kappa_reset: "Progreso de Kappa borrado",
     toast_hideout_reset: "Progreso de Refugio borrado",
     toast_quests_reset: "Progreso de misiones borrado",
-    toast_scanned: "+1 {0} (Escaneado)"
+    toast_scanned: "+1 {0} (Escaneado)",
+    ui_gamemode: "MODO DE JUEGO:",
+    ui_pvp: "PvP (Regular)",
+    ui_pve: "PvE"
   },
   en: {
     nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
@@ -341,7 +345,10 @@ const i18n = {
     toast_kappa_reset: "Kappa progress reset",
     toast_hideout_reset: "Hideout progress reset",
     toast_quests_reset: "Quest progress reset",
-    toast_scanned: "+1 {0} (Scanned)"
+    toast_scanned: "+1 {0} (Scanned)",
+    ui_gamemode: "GAME MODE:",
+    ui_pvp: "PvP (Regular)",
+    ui_pve: "PvE"
   }
 };
 
@@ -355,6 +362,38 @@ function changeLanguage(lang) {
   else if (currentPage === 'hideout') { hideoutStations = []; loadHideout(); }
   else if (currentPage === 'quests') { quests = []; loadQuests(); }
   else if (currentPage === 'valuation' && selectedValuationItem) { closeValuationDetail(); }
+}
+
+function switchGameMode(mode) {
+  gameMode = mode;
+  localStorage.setItem('eft_game_mode', mode);
+
+  // Refresh UI and Data
+  updateUI();
+
+  // Clear caches for current lang across all modes so fresh data is fetched for the new mode if needed
+  // Note: fetchWithCache uses a key that includes currentLang but NOT gameMode currently.
+  // To avoid mixing PvP/PvE in the same cache key, we should ideally include gameMode in the cache key.
+
+  if (currentPage === 'kappa') { kappaItems = []; loadKappa(); }
+  else if (currentPage === 'hideout') { hideoutStations = []; loadHideout(); }
+  else if (currentPage === 'quests') { quests = []; loadQuests(); }
+  else if (currentPage === 'valuation') {
+    if (selectedValuationItem) {
+      // Refresh detail for current item if open
+      const currentId = selectedValuationItem.id;
+      const currentSearch = document.getElementById('v-search').value;
+      searchValuationItems(currentSearch).then(() => {
+        if (valuationSearchResults.find(i => i.id === currentId)) {
+          showValuationDetail(currentId);
+        }
+      });
+    }
+  }
+
+  // Update header buttons
+  document.getElementById('btn-mode-pvp')?.classList.toggle('active', gameMode === 'regular');
+  document.getElementById('btn-mode-pve')?.classList.toggle('active', gameMode === 'pve');
 }
 
 function updateUI() {
@@ -386,7 +425,11 @@ function updateUI() {
   document.getElementById('btn-lang-es')?.classList.toggle('active', currentLang === 'es');
   document.getElementById('btn-lang-en')?.classList.toggle('active', currentLang === 'en');
 
-  // Update existing dynamic UI components
+  // Update game mode buttons active state
+  document.getElementById('btn-mode-pvp')?.classList.toggle('active', gameMode === 'regular');
+  document.getElementById('btn-mode-pve')?.classList.toggle('active', gameMode === 'pve');
+
+  // Refresh existing dynamic UI components
   if (currentPage === 'home') updateHomeMini();
 }
 
@@ -900,14 +943,14 @@ function toast(text, type = 't-found') {
 // ═══════════════════════════════
 // KAPPA MODULE
 // ═══════════════════════════════
-const KAPPA_QUERY = `query GetKappa($lang: LanguageCode) { tasks(lang: $lang) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
+const KAPPA_QUERY = `query GetKappa($lang: LanguageCode, $gameMode: GameMode) { tasks(lang: $lang, gameMode: $gameMode) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
 
 async function loadKappa() {
   setDisp('k-loading', 'flex');
   setDisp('k-error', 'none');
   setDisp('k-content', 'none');
   try {
-    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang });
+    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang, gameMode });
     const tasks = data.tasks;
     let collector = tasks.find(t => t.name === 'The Collector');
     if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
@@ -1065,14 +1108,14 @@ document.querySelectorAll('#page-kappa .filter-tab').forEach(tab => {
 // ═══════════════════════════════
 // HIDEOUT MODULE
 // ═══════════════════════════════
-const HIDEOUT_QUERY = `query GetHideout($lang: LanguageCode) { hideoutStations(lang: $lang) { id name levels { id level itemRequirements { item { id name shortName iconLink } count } } } }`;
+const HIDEOUT_QUERY = `query GetHideout($lang: LanguageCode, $gameMode: GameMode) { hideoutStations(lang: $lang, gameMode: $gameMode) { id name levels { id level itemRequirements { item { id name shortName iconLink } count } } } }`;
 
 async function loadHideout() {
   setDisp('h-loading', 'flex');
   setDisp('h-error', 'none');
   setDisp('h-content', 'none');
   try {
-    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout', { lang: currentLang });
+    const data = await fetchWithCache(HIDEOUT_QUERY, 'eft_cache_hideout', { lang: currentLang, gameMode });
     hideoutStations = data.hideoutStations
       .filter(s => s.levels && s.levels.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -1774,8 +1817,8 @@ function visualFeedback(success) {
 // ═══════════════════════════════
 // QUEST MODULE
 // ═══════════════════════════════
-const QUESTS_QUERY = `query GetQuests($lang: LanguageCode) {
-  tasks(lang: $lang) {
+const QUESTS_QUERY = `query GetQuests($lang: LanguageCode, $gameMode: GameMode) {
+  tasks(lang: $lang, gameMode: $gameMode) {
     id name minPlayerLevel experience
     trader { id name imageLink }
     map { id name normalizedName }
@@ -1798,7 +1841,14 @@ async function loadQuests() {
   setDisp('q-error', 'none');
   setDisp('q-content', 'none');
   try {
-    const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: QUESTS_QUERY, variables: { lang: currentLang } }) });
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: QUESTS_QUERY,
+        variables: { lang: currentLang, gameMode }
+      })
+    });
     const data = await res.json();
     if (data.errors) throw new Error(data.errors[0].message);
 
@@ -2258,8 +2308,8 @@ document.getElementById('quest-modal').addEventListener('click', e => { if (e.ta
 // ═══════════════════════════════
 // VALUATION MODULE
 // ═══════════════════════════════
-const VALUATION_QUERY = `query GetItems($name: String, $lang: LanguageCode) {
-  items(name: $name, lang: $lang) {
+const VALUATION_QUERY = `query GetItems($name: String, $lang: LanguageCode, $gameMode: GameMode) {
+  items(name: $name, lang: $lang, gameMode: $gameMode) {
     id name shortName iconLink basePrice avg24hPrice width height
     sellFor { price currency source }
   }
@@ -2286,7 +2336,7 @@ async function searchValuationItems(query) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query: VALUATION_QUERY,
-        variables: { name: query, lang: currentLang }
+        variables: { name: query, lang: currentLang, gameMode }
       })
     });
     const data = await res.json();
@@ -2337,9 +2387,12 @@ function showValuationDetail(itemId) {
     <button class="detail-back" onclick="closeValuationDetail()" style="color:#a855f7">← ${i18n[currentLang].ui_back_search}</button>
     <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
       <img src="${item.iconLink}" style="width:80px; height:80px; background:#000; padding:10px; border-radius:12px; border:1px solid var(--border);">
-      <div>
+    <div>
         <h2 style="font-family:'Rajdhani'; color:var(--text);">${item.name}</h2>
-        <div style="color:var(--text3); font-size:0.8rem; text-transform:uppercase;">${item.width}x${item.height} ${i18n[currentLang].ui_slots}</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div style="color:var(--text3); font-size:0.8rem; text-transform:uppercase;">${item.width}x${item.height} ${i18n[currentLang].ui_slots}</div>
+          <div style="font-size:0.7rem; color:var(--gold); background:rgba(201,168,76,0.1); padding:2px 6px; border-radius:4px; font-weight:bold; border:1px solid var(--border);">${gameMode === 'pve' ? 'PVE' : 'PVP'}</div>
+        </div>
       </div>
     </div>
 

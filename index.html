@@ -142,6 +142,43 @@
             filter: grayscale(0);
         }
 
+        /* Mode Selector Styles */
+        .mode-selector {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, .04);
+            padding: 3px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            margin-left: 10px;
+        }
+
+        .btn-mode {
+            padding: 4px 12px;
+            border-radius: 7px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: .75rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all var(--tr);
+            color: var(--text2);
+            background: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-mode:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-mode.active {
+            background: linear-gradient(135deg, rgba(201, 168, 76, .18), rgba(201, 168, 76, .08));
+            color: var(--gold-l);
+            border: 1px solid rgba(201, 168, 76, .25);
+        }
+
         .quest-list {
             display: flex;
             flex-direction: column;
@@ -3228,6 +3265,11 @@
                 <div class="lang-selector">
                     <button class="btn-lang" id="btn-lang-es" onclick="changeLanguage('es')">🇪🇸</button>
                     <button class="btn-lang" id="btn-lang-en" onclick="changeLanguage('en')">🇺🇸</button>
+                </div>
+                <!-- Game Mode Selector -->
+                <div class="mode-selector">
+                    <button class="btn-mode" id="btn-mode-pvp" onclick="switchGameMode('regular')">PvP</button>
+                    <button class="btn-mode" id="btn-mode-pve" onclick="switchGameMode('pve')">PvE</button>
                 </div>
                 <button class="btn btn-ghost" id="btn-reload" data-i18n-title="ui_reload_data"
                     title="Recargar datos">↻</button>
