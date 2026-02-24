@@ -3148,6 +3148,85 @@
             color: var(--accent);
             box-shadow: 0 0 10px rgba(196, 161, 90, 0.3);
         }
+
+        /* Flowchart Styles */
+        .q-flow-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 2rem 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .q-flow-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+            min-width: min-content;
+        }
+
+        .flow-level {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            position: relative;
+        }
+
+        .flow-node {
+            background: var(--bgcard);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            min-width: 140px;
+            max-width: 200px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 2;
+        }
+
+        .flow-node:hover {
+            border-color: var(--gold);
+            transform: scale(1.05);
+        }
+
+        .flow-node.is-completed {
+            border-color: var(--green);
+            background: rgba(74, 222, 128, 0.05);
+        }
+
+        .flow-node.is-active {
+            border-color: var(--blue);
+            background: rgba(96, 165, 250, 0.05);
+        }
+
+        .flow-node.is-locked {
+            opacity: 0.6;
+        }
+
+        .flow-node-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .flow-node-trader {
+            font-size: 0.65rem;
+            color: var(--text2);
+            text-transform: uppercase;
+        }
+
+        .flow-line {
+            position: absolute;
+            background: var(--border);
+            z-index: 1;
+        }
     </style>
 </head>
 
@@ -3528,6 +3607,8 @@
                         Activas</div>
                     <div id="q-filter-completed" class="filter-tab" data-filter="completed"
                         data-i18n="ui_filter_completed">Hechas</div>
+                    <div id="q-filter-kappa" class="filter-tab" data-filter="kappa" data-i18n="ui_filter_kappa">Kappa
+                    </div>
                 </div>
             </div>
 
@@ -3562,6 +3643,10 @@
             <div id="q-content" style="display:none">
                 <div id="q-list" class="quest-list">
                     <!-- Dynamically populated -->
+                </div>
+                <!-- Flowchart Container -->
+                <div id="q-flow-container" class="q-flow-container" style="display:none">
+                    <div id="q-flow-tree" class="q-flow-tree"></div>
                 </div>
             </div>
         </div>

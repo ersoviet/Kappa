@@ -145,7 +145,7 @@ const i18n = {
     stat_complete: "Completos", stat_missing: "Faltantes", stat_total_quests: "Total Misiones",
     ui_back_to_stations: "Volver a Estaciones", ui_kappa_needed_title: "Items Necesarios",
     ui_search_quest: "Buscar misión por nombre...", ui_my_level: "MI NIVEL:", ui_delete: "BORRAR",
-    ui_filter_all_f: "Todas", ui_filter_locked: "Bloqueadas", ui_filter_available: "Disponibles", ui_filter_completed: "Hechas",
+    ui_filter_all_f: "Todas", ui_filter_locked: "Bloqueadas", ui_filter_available: "Disponibles", ui_filter_completed: "Hechas", ui_filter_kappa: "Kappa",
     ui_map: "MAPA", ui_view_map: "VER MAPA",
     ui_current_goal: "OBJETIVO ACTUAL", ui_clear_goal: "Quitar objetivo",
     ui_valuation_title: "VALORACIÓN DE ITEMS", ui_valuation_desc: "Consulta el Flea Market y mejores ofertas de comerciantes",
@@ -267,7 +267,7 @@ const i18n = {
     ui_stations_title: "Hideout Stations", ui_hideout_items_title: "Hideout Items",
     ui_back_to_stations: "Back to Stations", ui_kappa_needed_title: "Required Items",
     ui_search_quest: "Search quest by name...", ui_my_level: "MY LEVEL:", ui_delete: "DELETE",
-    ui_filter_all_f: "All", ui_filter_locked: "Locked", ui_filter_available: "Available", ui_filter_completed: "Done",
+    ui_filter_all_f: "All", ui_filter_locked: "Locked", ui_filter_available: "Available", ui_filter_completed: "Done", ui_filter_kappa: "Kappa",
     ui_map: "MAP", ui_view_map: "VIEW MAP",
     ui_current_goal: "CURRENT GOAL", ui_clear_goal: "Clear goal",
     ui_valuation_title: "ITEM VALUATION", ui_valuation_desc: "Check Flea Market and best trader offers",
@@ -1819,7 +1819,7 @@ function visualFeedback(success) {
 // ═══════════════════════════════
 const QUESTS_QUERY = `query GetQuests($lang: LanguageCode, $gameMode: GameMode) {
   tasks(lang: $lang, gameMode: $gameMode) {
-    id name minPlayerLevel experience
+    id name minPlayerLevel experience kappa
     trader { id name imageLink }
     map { id name normalizedName }
     taskRequirements { task { id name } status }
@@ -1955,7 +1955,18 @@ function getQuestPath(questId, visited = new Set()) {
 
 function renderQuests() {
   const list = document.getElementById('q-list');
+  const flowContainer = document.getElementById('q-flow-container');
   const q = questSearch.toLowerCase();
+
+  if (questFilter === 'kappa') {
+    list.style.display = 'none';
+    flowContainer.style.display = 'block';
+    renderKappaFlowchart();
+    return;
+  }
+
+  list.style.display = 'flex';
+  flowContainer.style.display = 'none';
 
   const filtered = quests.filter(quest => {
     const ms = !q || quest.name.toLowerCase().includes(q);
@@ -2121,6 +2132,81 @@ function showQuestDetail(questId) {
 function closeQuestDetail() {
   document.getElementById('quest-modal').classList.remove('active');
   selectedQuest = null;
+}
+
+function renderKappaFlowchart() {
+  const container = document.getElementById('q-flow-tree');
+  if (!container) return;
+
+  const kappaQuests = quests.filter(q => q.kappa);
+  if (!kappaQuests.length) {
+    container.innerHTML = '<div class="empty-state">No se encontraron misiones de Kappa</div>';
+    return;
+  }
+
+  // Build dependency map
+  const questMap = new Map();
+  kappaQuests.forEach(q => questMap.set(q.id, q));
+
+  // Determine tiers (depth)
+  const tiersMap = new Map();
+  const questToTier = new Map();
+
+  function getTier(qId, visited = new Set()) {
+    if (questToTier.has(qId)) return questToTier.get(qId);
+    if (visited.has(qId)) return 0; // Prevent infinite loops
+    visited.add(qId);
+
+    const q = questMap.get(qId);
+    if (!q || !q.taskRequirements || q.taskRequirements.length === 0) {
+      questToTier.set(qId, 0);
+      return 0;
+    }
+
+    let maxTier = -1;
+    q.taskRequirements.forEach(req => {
+      // Only care about requirements that are also Kappa quests
+      if (req.task && questMap.has(req.task.id)) {
+        maxTier = Math.max(maxTier, getTier(req.task.id, visited));
+      }
+    });
+
+    const tier = maxTier + 1;
+    questToTier.set(qId, tier);
+    return tier;
+  }
+
+  kappaQuests.forEach(q => getTier(q.id));
+
+  // Group by tier
+  const tierGroups = [];
+  questToTier.forEach((tier, qId) => {
+    if (!tierGroups[tier]) tierGroups[tier] = [];
+    tierGroups[tier].push(questMap.get(qId));
+  });
+
+  // Render
+  container.innerHTML = tierGroups.map((group, tIdx) => `
+    <div class="flow-level" data-tier="${tIdx}">
+      ${group.sort((a, b) => (a.trader?.name || '').localeCompare(b.trader?.name || '')).map(q => {
+    const isComp = questsCompleted.has(q.id);
+    const isAvail = isQuestAvailable(q);
+    const isActive = questsActive.has(q.id);
+    const status = isComp ? 'is-completed' : (isActive ? 'is-active' : (isAvail ? 'is-available' : 'is-locked'));
+
+    return `
+          <div class="flow-node ${status}" onclick="showQuestDetail('${q.id}')">
+            <div class="flow-node-trader">${q.trader ? q.trader.name : ''}</div>
+            <div class="flow-node-title" title="${q.name}">${q.name}</div>
+            <div style="font-size: 0.6rem; margin-top: 4px; opacity: 0.8;">
+              ${isComp ? '✅' : (isActive ? '🔥' : (isAvail ? '🔓' : '🔒'))} 
+              LVL ${q.minPlayerLevel || 1}
+            </div>
+          </div>
+        `;
+  }).join('')}
+    </div>
+  `).join('<div style="height: 30px; border-left: 2px dashed var(--border); margin: -10px 0;"></div>');
 }
 
 function toggleQuest(id) {
