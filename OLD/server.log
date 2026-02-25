@@ -1,8 +1,0 @@
-nohup: no se tendrá en cuenta la entrada
-  ✓ Database initialized
-
-  ╔═══════════════════════════════════════╗
-  ║   EFT Tracker Server running          ║
-  ║   http://localhost:3000               ║
-  ╚═══════════════════════════════════════╝
-
