@@ -226,7 +226,8 @@ const i18n = {
     toast_scanned: "+1 {0} (Escaneado)",
     ui_gamemode: "MODO DE JUEGO:",
     ui_pvp: "PvP (Regular)",
-    ui_pve: "PvE"
+    ui_pve: "PvE",
+    ui_syncing: "Sincronizando..."
   },
   en: {
     nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
@@ -348,7 +349,8 @@ const i18n = {
     toast_scanned: "+1 {0} (Scanned)",
     ui_gamemode: "GAME MODE:",
     ui_pvp: "PvP (Regular)",
-    ui_pve: "PvE"
+    ui_pve: "PvE",
+    ui_syncing: "Syncing..."
   }
 };
 
@@ -513,6 +515,10 @@ function loadQuests_storage() {
 let _syncTimeout = null;
 function syncProfileToServer() {
   if (!authToken || isReadOnly) return;
+
+  const overlay = getEl('sync-overlay');
+  if (overlay) overlay.classList.add('active');
+
   clearTimeout(_syncTimeout);
   _syncTimeout = setTimeout(async () => {
     try {
@@ -531,8 +537,10 @@ function syncProfileToServer() {
       });
     } catch (e) {
       console.warn('Error syncing profile:', e);
+    } finally {
+      if (overlay) overlay.classList.remove('active');
     }
-  }, 500);
+  }, 800);
 }
 
 // ═══════ AUTH FUNCTIONS ═══════

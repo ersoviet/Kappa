@@ -1156,6 +1156,43 @@
             text-transform: uppercase
         }
 
+        /* SYNC OVERLAY */
+        .sync-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 2100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .sync-overlay.active {
+            display: flex;
+        }
+
+        .sync-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(201, 168, 76, 0.1);
+            border-top: 4px solid var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-text {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--gold);
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
 
 
         .error-screen {
@@ -3815,6 +3852,13 @@
     </div>
 
     <div id="toast-container"></div>
+
+    <!-- Sync Overlay -->
+    <div class="sync-overlay" id="sync-overlay">
+        <div class="sync-spinner"></div>
+        <div class="sync-text" data-i18n="ui_syncing">Sincronizando...</div>
+    </div>
+
     <script src="app.js?v=3.1"></script>
 </body>
 
