@@ -2578,3 +2578,48 @@ async function initApp() {
 }
 
 initApp();
+
+// ═══════════════════════════════════════════════════
+// UI HELPERS - Drag Scroll
+// ═══════════════════════════════════════════════════
+function initDragScroll(el) {
+  if (!el) return;
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+  let hasMoved = false;
+
+  el.addEventListener('mousedown', (e) => {
+    // Solo clic izquierdo
+    if (e.button !== 0) return;
+    isDown = true;
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+    hasMoved = false;
+  });
+
+  el.addEventListener('mouseleave', () => { isDown = false; });
+  el.addEventListener('mouseup', () => { isDown = false; });
+
+  el.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5; // Factor de velocidad
+    if (Math.abs(walk) > 5) hasMoved = true;
+    el.scrollLeft = scrollLeft - walk;
+  });
+
+  // Prevenir clics si hemos arrastrado significativamente
+  el.addEventListener('click', (e) => {
+    if (hasMoved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+}
+
+// Inicializar drag-scroll para contenedores
+document.addEventListener('DOMContentLoaded', () => {
+  initDragScroll(getEl('q-flow-container'));
+  initDragScroll(getEl('trader-filters'));
+});
