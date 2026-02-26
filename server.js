@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,14 @@ async function initDB() {
       target_quest_id TEXT DEFAULT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+    db.run(`
+    CREATE TABLE IF NOT EXISTS api_cache (
+      cache_key TEXT PRIMARY KEY,
+      data TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -284,6 +293,43 @@ app.put('/api/profile', authenticateToken, (req, res) => {
     } catch (err) {
         console.error('Update profile error:', err);
         res.status(500).json({ error: 'Error al actualizar el perfil' });
+    }
+});
+
+// ═══════ TARKOV API PROXY & CACHE ═══════
+app.post('/api/tarkov-data', async (req, res) => {
+    try {
+        const { query, variables } = req.body;
+        if (!query) return res.status(400).json({ error: 'Query requerida' });
+
+        const hash = crypto.createHash('md5').update(JSON.stringify({ query, variables })).digest('hex');
+
+        // Buscar en caché (vencimiento 24h)
+        const cached = getRow("SELECT data FROM api_cache WHERE cache_key = ? AND created_at > datetime('now', '-24 hours')", [hash]);
+
+        if (cached) {
+            return res.json(JSON.parse(cached.data));
+        }
+
+        // Si no está en caché o venció, llamar a tarkov.dev
+        const response = await fetch('https://api.tarkov.dev/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, variables })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        if (data && data.data) {
+            db.run('INSERT OR REPLACE INTO api_cache (cache_key, data, created_at) VALUES (?, ?, datetime("now"))', [hash, JSON.stringify(data)]);
+            saveDB();
+        }
+
+        res.json(data);
+    } catch (err) {
+        console.error('Tarkov Proxy Error:', err);
+        res.status(500).json({ error: 'Error al obtener datos de Tarkov API' });
     }
 });
 

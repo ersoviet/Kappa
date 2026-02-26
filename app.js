@@ -3,7 +3,7 @@
 // Kappa + Hideout tracker using tarkov.dev GraphQL API
 // ═══════════════════════════════════════════════════
 
-const API_URL = 'https://api.tarkov.dev/graphql';
+const API_URL = '/api/tarkov-data';
 const KAPPA_STORAGE = 'kappa_tracker_v2';
 const HIDEOUT_STORAGE = 'hideout_tracker_v1';
 const HIDEOUT_INVENTORY_STORAGE = 'hideout_inventory_v2';
@@ -1855,18 +1855,8 @@ async function loadQuests() {
   setDisp('q-error', 'none');
   setDisp('q-content', 'none');
   try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: QUESTS_QUERY,
-        variables: { lang: currentLang, gameMode }
-      })
-    });
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-
-    quests = data.data.tasks.sort((a, b) => (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0));
+    const data = await fetchWithCache(QUESTS_QUERY, 'eft_cache_quests', { lang: currentLang, gameMode });
+    quests = data.tasks.sort((a, b) => (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0));
 
     renderTraderFilters();
     updateQuestStats();
@@ -2431,16 +2421,8 @@ async function searchValuationItems(query) {
   initState.style.display = 'none';
 
   try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: VALUATION_QUERY,
-        variables: { name: query, lang: currentLang, gameMode }
-      })
-    });
-    const data = await res.json();
-    valuationSearchResults = data.data.items || [];
+    const data = await fetchWithCache(VALUATION_QUERY, `eft_cache_val_${query}`, { name: query, lang: currentLang, gameMode }, 1);
+    valuationSearchResults = data.items || [];
     renderValuationResults();
   } catch (e) {
     console.error('Valuation search error:', e);
