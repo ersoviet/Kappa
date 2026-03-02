@@ -1669,7 +1669,6 @@ async function startScanner(mode) {
 
     await initTesseract();
     document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
-    requestAnimationFrame(scannerLoop);
   } catch (err) {
     console.error('Error cámara:', err);
     document.getElementById('scanner-status').textContent = i18n[currentLang].ui_camera_error;
@@ -1686,21 +1685,6 @@ function stopScanner() {
   document.getElementById('scanner-modal').classList.remove('active');
 }
 
-async function scannerLoop() {
-  if (!scannerActive) return;
-
-  if (scannerCooldown > 0) {
-    scannerCooldown--;
-    requestAnimationFrame(scannerLoop);
-    return;
-  }
-
-  if (!scannerProcessing) {
-    await processFrame();
-  }
-
-  requestAnimationFrame(scannerLoop);
-}
 
 async function captureAndAnalyze() {
   if (scannerProcessing) return;
@@ -1717,70 +1701,82 @@ async function captureAndAnalyze() {
     return;
   }
 
-  // Capturamos el frame completo a alta resolución
   const ctx = canvas.getContext('2d');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0);
 
   try {
-    document.getElementById('scanner-status').textContent = "Procesando imagen completa...";
-    const { data: { text } } = await tesseractWorker.recognize(canvas);
+    document.getElementById('scanner-status').textContent = "Escaneando imagen...";
+    const { data: { text, lines: tessLines } } = await tesseractWorker.recognize(canvas);
 
-    // Convertimos a líneas para analizar una por una
-    const lines = text.split('\n').map(l => l.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ''));
+    // Clean text lines for better matching
+    const lines = tessLines.map(line => ({
+      text: line.text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim(),
+      bbox: line.bbox
+    })).filter(l => l.text.length > 2);
+
     let foundCount = 0;
     let candidates = [];
 
     if (scannerMode === 'kappa') candidates = kappaItems;
     else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
     else if (scannerMode === 'quests_active') candidates = quests;
+    else if (scannerMode === 'valuation') candidates = [...kappaItems, ...consolidatedHideoutItems];
 
-    // Analizar múltiples misiones en el texto detectado
-    const detectedMatches = [];
+    const detectedActions = [];
 
-    // Buscamos candidatos en el bloque de texto
     candidates.forEach(item => {
-      const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, '');
-      if (itemName.length < 4) return; // Evitar falsos positivos cortos
+      const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+      if (itemName.length < 4) return;
 
-      // Buscamos si el nombre de la misión aparece en alguna línea
-      const matchingLineIndex = lines.findIndex(line => line.includes(itemName) || itemName.includes(line) && line.length > 5);
+      // Look for the name in any line
+      const bestLineIdx = lines.findIndex(l => l.text.includes(itemName) || itemName.includes(l.text) && l.text.length > 5);
 
-      if (matchingLineIndex !== -1) {
-        const line = lines[matchingLineIndex];
-        // Intentar detectar estado cerca de esa línea o en ella
+      if (bestLineIdx !== -1) {
+        const line = lines[bestLineIdx];
         let status = null;
-        // Buscamos en la misma línea o la siguiente (a veces el estado está debajo o al lado)
-        const contextText = (line + " " + (lines[matchingLineIndex + 1] || "")).toLowerCase();
 
-        if (contextText.includes('active') || contextText.includes('activ')) status = 'active';
-        else if (contextText.includes('complet')) status = 'completed';
+        // Search for status in the same line or immediate vicinity (next 2 lines)
+        const nearbyText = lines.slice(bestLineIdx, bestLineIdx + 3).map(l => l.text).join(' ');
 
-        detectedMatches.push({ item, status });
+        if (nearbyText.includes('active') || nearbyText.includes('activ')) status = 'active';
+        else if (nearbyText.includes('complet')) status = 'completed';
+
+        detectedActions.push({ item, status });
       }
     });
 
-    // Aplicar cambios detectados
-    for (const match of detectedMatches) {
+    // Execute updates
+    for (const action of detectedActions) {
       let changed = false;
       if (scannerMode === 'quests_active') {
-        if (match.status === 'active' && !questsActive.has(match.item.id)) {
-          questsActive.add(match.item.id);
-          questsCompleted.delete(match.item.id);
-          findRecursivePrerequisites(match.item.id).forEach(p => {
-            questsCompleted.add(p.id);
-            questsActive.delete(p.id);
-          });
+        if (action.status === 'completed' && !questsCompleted.has(action.item.id)) {
+          questsCompleted.add(action.item.id);
+          questsActive.delete(action.item.id);
           changed = true;
-        } else if (match.status === 'completed' && !questsCompleted.has(match.item.id)) {
-          questsCompleted.add(match.item.id);
-          questsActive.delete(match.item.id);
+        } else if (action.status === 'active' && !questsActive.has(action.item.id)) {
+          questsActive.add(action.item.id);
+          questsCompleted.delete(action.item.id);
+          findRecursivePrerequisites(action.item.id).forEach(p => questsCompleted.add(p.id));
           changed = true;
         }
-      } else if (scannerMode === 'kappa' && !kappaFound.has(match.item.id)) {
-        kappaFound.add(match.item.id);
+      } else if (scannerMode === 'kappa' && !kappaFound.has(action.item.id)) {
+        toggleKappa(action.item.id);
         changed = true;
+      } else if (scannerMode === 'hideout') {
+        const current = getInventoryQty(action.item.id);
+        if (current < action.item.totalCount) {
+          markHideoutItemAuto(action.item);
+          changed = true;
+        }
+      } else if (scannerMode === 'valuation') {
+        // For valuation we only care about the first match to show detail
+        stopScanner();
+        getEl('v-search').value = action.item.name;
+        searchValuationItems(action.item.name).then(() => showValuationDetail(action.item.id));
+        foundCount = 1;
+        break;
       }
 
       if (changed) foundCount++;
@@ -1793,184 +1789,20 @@ async function captureAndAnalyze() {
       updateKappaStats();
       renderQuests();
       renderKappa();
+      renderHideoutItemsView();
       updateHomeMini();
-      toast(`Escaneo completado: ${foundCount} actualizaciones`, 't-found');
-      visualFeedback(true);
+      toast(`${foundCount} elementos detectados`, 't-found');
     } else {
-      toast("No se detectaron nuevas misiones", 't-unfound');
+      toast("No se detectaron misiones", 't-unfound');
     }
 
   } catch (e) {
-    console.warn('Batch OCR Error:', e);
-    toast("Error al analizar la imagen", 't-unfound');
+    console.warn('OCR Batch Error:', e);
+    toast("Error al analizar", 't-unfound');
   } finally {
     scannerProcessing = false;
     if (overlay) overlay.classList.remove('active');
     document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
-  }
-}
-
-async function processFrame() {
-  const video = document.getElementById('scanner-video');
-  const frame = document.querySelector('.scanner-frame');
-  if (!video || !frame || video.readyState !== video.HAVE_ENOUGH_DATA) return;
-
-  // En modo manual, solo actualizamos el visualizador, no procesamos OCR automáticamente
-  if (true) return; // Desactivamos el procesamiento automático por frames para centrarlo en captura manual
-
-  scannerProcessing = true;
-
-  const videoWidth = video.videoWidth;
-  const videoHeight = video.videoHeight;
-  const rect = frame.getBoundingClientRect();
-  const videoRect = video.getBoundingClientRect();
-
-  // Mapping screen coordinates to video coordinates (considering object-fit: cover)
-  const scale = Math.max(videoRect.width / videoWidth, videoRect.height / videoHeight);
-  const renderedWidth = videoWidth * scale;
-  const renderedHeight = videoHeight * scale;
-
-  const offsetX = (renderedWidth - videoRect.width) / 2;
-  const offsetY = (renderedHeight - videoRect.height) / 2;
-
-  const cropX = (rect.left - videoRect.left + offsetX) / scale;
-  const cropY = (rect.top - videoRect.top + offsetY) / scale;
-  const cropWidth = rect.width / scale;
-  const cropHeight = rect.height / scale;
-
-  const canvas = document.getElementById('scanner-canvas');
-  const ctx = canvas.getContext('2d');
-  const dpr = 2.0;
-
-  canvas.width = cropWidth * dpr;
-  canvas.height = cropHeight * dpr;
-
-  ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-
-  try {
-    const { data: { text } } = await tesseractWorker.recognize(canvas);
-    const cleanText = text.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '');
-
-    if (cleanText.length > 3) {
-      matchAndMark(cleanText);
-    }
-  } catch (e) {
-    console.warn('OCR Error:', e);
-  }
-
-  scannerProcessing = false;
-}
-
-function matchAndMark(text) {
-  let candidates = [];
-  if (scannerMode === 'kappa') candidates = kappaItems;
-  else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
-  else if (scannerMode === 'quests_active') candidates = quests;
-  else if (scannerMode === 'valuation') {
-    candidates = [...kappaItems, ...consolidatedHideoutItems];
-  }
-  let bestMatch = null;
-  let bestScore = 0;
-
-  candidates.forEach(item => {
-    const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, '');
-    if (text.includes(itemName) || itemName.includes(text)) {
-      const score = Math.max(text.length / itemName.length, itemName.length / text.length);
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = item;
-      }
-    }
-  });
-
-  if (bestMatch && bestScore > 0.4) {
-    const display = document.getElementById('scanner-match-name');
-    const statusDisp = document.getElementById('scanner-match-status');
-    display.textContent = `${i18n[currentLang].ui_detected}: ${bestMatch.name}`;
-
-    // Handle status detection for quests
-    let detectedStatus = null;
-    if (scannerMode === 'quests_active' || scannerMode === 'valuation') {
-      if (text.includes('active') || text.includes('activ')) detectedStatus = 'active';
-      else if (text.includes('complet')) detectedStatus = 'completed';
-    }
-
-    if (detectedStatus && statusDisp) {
-      statusDisp.textContent = detectedStatus === 'active' ? 'ACTIVE!' : 'COMPLETED';
-      statusDisp.className = `scanner-status-badge ${detectedStatus}`;
-      statusDisp.style.display = 'inline-block';
-    } else if (statusDisp) {
-      statusDisp.style.display = 'none';
-    }
-
-    if (bestScore > 0.7) {
-      if (scannerMode === 'kappa') {
-        if (!kappaFound.has(bestMatch.id)) {
-          toggleKappa(bestMatch.id);
-          scannerCooldown = 60;
-          visualFeedback(true);
-        }
-      } else if (scannerMode === 'hideout') {
-        const status = getItemStatus(bestMatch);
-        if (status !== 'complete') {
-          markHideoutItemAuto(bestMatch);
-          scannerCooldown = 60;
-          visualFeedback(true);
-        }
-      } else if (scannerMode === 'valuation') {
-        stopScanner();
-        getEl('v-search').value = bestMatch.name;
-        searchValuationItems(bestMatch.name).then(() => {
-          showValuationDetail(bestMatch.id);
-        });
-        visualFeedback(true);
-      } else if (scannerMode === 'quests_active') {
-        let stateChanged = false;
-        if (detectedStatus === 'active') {
-          if (!questsActive.has(bestMatch.id)) {
-            // Switch to active (removes from completed)
-            questsActive.add(bestMatch.id);
-            questsCompleted.delete(bestMatch.id);
-
-            // Automatically complete prerequisites
-            const prerequisites = findRecursivePrerequisites(bestMatch.id);
-            prerequisites.forEach(q => {
-              questsCompleted.add(q.id);
-              questsActive.delete(q.id);
-            });
-            stateChanged = true;
-          }
-        } else if (detectedStatus === 'completed') {
-          if (!questsCompleted.has(bestMatch.id)) {
-            // Switch to completed (removes from active)
-            questsCompleted.add(bestMatch.id);
-            questsActive.delete(bestMatch.id);
-            stateChanged = true;
-          }
-        } else if (!detectedStatus) {
-          // If no status detected, just mark as active as fallback
-          if (!questsActive.has(bestMatch.id) && !questsCompleted.has(bestMatch.id)) {
-            toggleActiveQuest(bestMatch.id);
-            stateChanged = true;
-          }
-        }
-
-        if (stateChanged) {
-          saveQuests();
-          updateQuestStats();
-          renderQuests();
-          updateHomeMini();
-          scannerCooldown = 60;
-          visualFeedback(true);
-          const statusText = detectedStatus === 'active' ? 'ACTIVE!' : (detectedStatus === 'completed' ? 'COMPLETED' : 'DETECTOR');
-          toast(`${statusText}: ${bestMatch.name}`, detectedStatus === 'completed' ? 't-found' : 't-built');
-        }
-      }
-    }
-  } else {
-    // Reset status display if no match
-    const statusDisp = document.getElementById('scanner-match-status');
-    if (statusDisp) statusDisp.style.display = 'none';
   }
 }
 

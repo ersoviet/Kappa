@@ -2940,52 +2940,27 @@
         }
 
         .scanner-frame {
-            width: 92%;
-            max-width: 800px;
-            height: 65px;
-            max-height: 15vh;
-            border: 2px solid var(--gold);
-            border-radius: 8px;
+            width: 85%;
+            height: 75%;
+            border: 2px dashed rgba(201, 168, 76, 0.4);
+            border-radius: 12px;
             position: relative;
             box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.6);
-            background: rgba(201, 168, 76, 0.03);
+            background: rgba(255, 255, 255, 0.02);
             transition: all 0.3s;
         }
 
-        @media screen and (max-height: 500px) {
-            .scanner-frame {
-                height: 50px;
-            }
-        }
-
-        .scanner-laser {
+        .scanner-frame::after {
+            content: 'ÁREA DE CAPTURA';
             position: absolute;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--gold);
-            box-shadow: 0 0 15px var(--gold);
-            animation: scanLine 2s linear infinite;
-        }
-
-        @keyframes scanLine {
-            0% {
-                top: 0;
-                opacity: 0;
-            }
-
-            10% {
-                opacity: 1;
-            }
-
-            90% {
-                opacity: 1;
-            }
-
-            100% {
-                top: 100%;
-                opacity: 0;
-            }
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7rem;
+            color: var(--gold);
+            letter-spacing: 2px;
+            opacity: 0.6;
         }
 
         .scanner-corner {
@@ -3170,14 +3145,6 @@
             display: flex;
         }
 
-        .scanner-frame.manual {
-            height: 70%;
-            max-height: 70vh;
-            width: 85%;
-            border-style: dashed;
-            opacity: 0.5;
-            background: transparent;
-        }
 
         .scanner-log {
             position: absolute;
@@ -3986,7 +3953,6 @@
                     <div class="scanner-corner top-right"></div>
                     <div class="scanner-corner bot-left"></div>
                     <div class="scanner-corner bot-right"></div>
-                    <div class="scanner-laser"></div>
                 </div>
             </div>
             <div class="scanner-log" id="scanner-log"></div>
@@ -3994,7 +3960,7 @@
         <div class="scanner-footer">
             <div class="scanner-status" id="scanner-status" data-i18n="ui_scanner_init">Preparando cámara...</div>
             <div class="scanner-match-row">
-                <div class="scanner-match" id="scanner-match-name">Pulsa el botón para capturar la lista</div>
+                <div class="scanner-match" id="scanner-match-name">Enfoca la lista y pulsa el botón</div>
                 <div class="scanner-status-badge" id="scanner-match-status"></div>
             </div>
             <div class="scanner-actions">
