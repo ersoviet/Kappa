@@ -2880,6 +2880,38 @@
 
         .scanner-modal.active {
             display: flex;
+            background: #000;
+        }
+
+        @media (orientation: landscape) {
+            .scanner-modal {
+                flex-direction: row;
+            }
+
+            .scanner-header {
+                width: 15rem;
+                height: 100%;
+                border-bottom: none !important;
+                border-right: 1px solid var(--border);
+                flex-direction: column !important;
+                justify-content: center !important;
+                gap: 2rem;
+            }
+
+            .scanner-footer {
+                width: 25rem;
+                height: 100%;
+                border-top: none !important;
+                border-left: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 2rem !important;
+            }
+
+            .scanner-viewport {
+                height: 100%;
+            }
         }
 
         .scanner-viewport {
@@ -2908,15 +2940,22 @@
         }
 
         .scanner-frame {
-            width: 90%;
-            max-width: 600px;
-            height: 80px;
-            max-height: 20vh;
+            width: 92%;
+            max-width: 800px;
+            height: 65px;
+            max-height: 15vh;
             border: 2px solid var(--gold);
-            border-radius: 12px;
+            border-radius: 8px;
             position: relative;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
-            background: rgba(201, 168, 76, 0.05);
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.6);
+            background: rgba(201, 168, 76, 0.03);
+            transition: all 0.3s;
+        }
+
+        @media screen and (max-height: 500px) {
+            .scanner-frame {
+                height: 50px;
+            }
         }
 
         .scanner-laser {
@@ -2989,12 +3028,21 @@
         }
 
         .scanner-header {
-            padding: 1rem;
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(10, 12, 15, 0.9);
+            background: rgba(10, 12, 15, 0.95);
             border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        #scanner-type-label {
+            font-size: 0.7rem;
+            color: var(--text3);
+            letter-spacing: 2px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
         }
 
         .scanner-footer {
@@ -3861,8 +3909,7 @@
     <div class="scanner-modal" id="scanner-modal">
         <div class="scanner-header">
             <div class="logo-text">SCANNER</div>
-            <div id="scanner-type-label" style="font-size:0.7rem; color:var(--text3); letter-spacing:1px;">MODO: KAPPA
-            </div>
+            <div id="scanner-type-label">MODO: KAPPA</div>
         </div>
         <div class="scanner-viewport">
             <video id="scanner-video" autoplay playsinline muted></video>
