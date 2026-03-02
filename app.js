@@ -1774,7 +1774,23 @@ function matchAndMark(text) {
 
   if (bestMatch && bestScore > 0.4) {
     const display = document.getElementById('scanner-match-name');
+    const statusDisp = document.getElementById('scanner-match-status');
     display.textContent = `${i18n[currentLang].ui_detected}: ${bestMatch.name}`;
+
+    // Handle status detection for quests
+    let detectedStatus = null;
+    if (scannerMode === 'quests_active' || scannerMode === 'valuation') {
+      if (text.includes('active') || text.includes('activ')) detectedStatus = 'active';
+      else if (text.includes('complet')) detectedStatus = 'completed';
+    }
+
+    if (detectedStatus && statusDisp) {
+      statusDisp.textContent = detectedStatus === 'active' ? 'ACTIVE!' : 'COMPLETED';
+      statusDisp.className = `scanner-status-badge ${detectedStatus}`;
+      statusDisp.style.display = 'inline-block';
+    } else if (statusDisp) {
+      statusDisp.style.display = 'none';
+    }
 
     if (bestScore > 0.7) {
       if (scannerMode === 'kappa') {
@@ -1798,13 +1814,52 @@ function matchAndMark(text) {
         });
         visualFeedback(true);
       } else if (scannerMode === 'quests_active') {
-        if (!questsActive.has(bestMatch.id) && !questsCompleted.has(bestMatch.id)) {
-          toggleActiveQuest(bestMatch.id);
+        let stateChanged = false;
+        if (detectedStatus === 'active') {
+          if (!questsActive.has(bestMatch.id)) {
+            // Switch to active (removes from completed)
+            questsActive.add(bestMatch.id);
+            questsCompleted.delete(bestMatch.id);
+
+            // Automatically complete prerequisites
+            const prerequisites = findRecursivePrerequisites(bestMatch.id);
+            prerequisites.forEach(q => {
+              questsCompleted.add(q.id);
+              questsActive.delete(q.id);
+            });
+            stateChanged = true;
+          }
+        } else if (detectedStatus === 'completed') {
+          if (!questsCompleted.has(bestMatch.id)) {
+            // Switch to completed (removes from active)
+            questsCompleted.add(bestMatch.id);
+            questsActive.delete(bestMatch.id);
+            stateChanged = true;
+          }
+        } else if (!detectedStatus) {
+          // If no status detected, just mark as active as fallback
+          if (!questsActive.has(bestMatch.id) && !questsCompleted.has(bestMatch.id)) {
+            toggleActiveQuest(bestMatch.id);
+            stateChanged = true;
+          }
+        }
+
+        if (stateChanged) {
+          saveQuests();
+          updateQuestStats();
+          renderQuests();
+          updateHomeMini();
           scannerCooldown = 60;
           visualFeedback(true);
+          const statusText = detectedStatus === 'active' ? 'ACTIVE!' : (detectedStatus === 'completed' ? 'COMPLETED' : 'DETECTOR');
+          toast(`${statusText}: ${bestMatch.name}`, detectedStatus === 'completed' ? 't-found' : 't-built');
         }
       }
     }
+  } else {
+    // Reset status display if no match
+    const statusDisp = document.getElementById('scanner-match-status');
+    if (statusDisp) statusDisp.style.display = 'none';
   }
 }
 

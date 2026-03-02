@@ -3014,10 +3014,43 @@
             text-transform: uppercase;
         }
 
+        .scanner-match-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-height: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
         .scanner-match {
             color: var(--gold);
             font-weight: 700;
-            min-height: 1.2rem;
+        }
+
+        .scanner-status-badge {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: none;
+        }
+
+        .scanner-status-badge.active {
+            display: inline-block;
+            background: rgba(96, 165, 250, 0.2);
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+
+        .scanner-status-badge.completed {
+            display: inline-block;
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
         }
 
         .btn-scanner-close {
@@ -3846,7 +3879,10 @@
         </div>
         <div class="scanner-footer">
             <div class="scanner-status" id="scanner-status" data-i18n="ui_scanner_init">Preparando cámara...</div>
-            <div class="scanner-match" id="scanner-match-name" data-i18n="ui_scanner_focus">Enfoca el nombre del item
+            <div class="scanner-match-row">
+                <div class="scanner-match" id="scanner-match-name" data-i18n="ui_scanner_focus">Enfoca el nombre del
+                    item</div>
+                <div class="scanner-status-badge" id="scanner-match-status"></div>
             </div>
             <div style="margin-top:1.5rem">
                 <button class="btn-scanner-close" onclick="stopScanner()" data-i18n="ui_scanner_close">CERRAR
