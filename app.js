@@ -1659,8 +1659,8 @@ async function startScanner(mode) {
     const constraints = {
       video: {
         facingMode: 'environment', // Usar cámara trasera
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1920 }, // Mayor resolución para batch
+        height: { ideal: 1080 }
       }
     };
     scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1668,7 +1668,7 @@ async function startScanner(mode) {
     video.srcObject = scannerStream;
 
     await initTesseract();
-    document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
+    document.getElementById('scanner-status').textContent = "Cámara preparada para captura";
   } catch (err) {
     console.error('Error cámara:', err);
     document.getElementById('scanner-status').textContent = i18n[currentLang].ui_camera_error;
@@ -1683,13 +1683,22 @@ function stopScanner() {
     scannerStream = null;
   }
   document.getElementById('scanner-modal').classList.remove('active');
+  document.getElementById('scanner-loading').classList.remove('active');
+  document.getElementById('scanner-results').classList.remove('active');
 }
 
+function closeScannerResults() {
+  document.getElementById('scanner-results').classList.remove('active');
+}
 
 async function captureAndAnalyze() {
   if (scannerProcessing) return;
+
   const overlay = document.getElementById('scanner-loading');
+  const btn = document.getElementById('btn-capture-action');
+
   if (overlay) overlay.classList.add('active');
+  if (btn) btn.disabled = true;
 
   scannerProcessing = true;
 
@@ -1698,6 +1707,7 @@ async function captureAndAnalyze() {
   if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
     scannerProcessing = false;
     if (overlay) overlay.classList.remove('active');
+    if (btn) btn.disabled = false;
     return;
   }
 
@@ -1707,10 +1717,8 @@ async function captureAndAnalyze() {
   ctx.drawImage(video, 0, 0);
 
   try {
-    document.getElementById('scanner-status').textContent = "Escaneando imagen...";
-    const { data: { text, lines: tessLines } } = await tesseractWorker.recognize(canvas);
+    const { data: { lines: tessLines } } = await tesseractWorker.recognize(canvas);
 
-    // Clean text lines for better matching
     const lines = tessLines.map(line => ({
       text: line.text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim(),
       bbox: line.bbox
@@ -1725,19 +1733,16 @@ async function captureAndAnalyze() {
     else if (scannerMode === 'valuation') candidates = [...kappaItems, ...consolidatedHideoutItems];
 
     const detectedActions = [];
+    const resultsSummary = [];
 
     candidates.forEach(item => {
       const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
       if (itemName.length < 4) return;
 
-      // Look for the name in any line
       const bestLineIdx = lines.findIndex(l => l.text.includes(itemName) || itemName.includes(l.text) && l.text.length > 5);
 
       if (bestLineIdx !== -1) {
-        const line = lines[bestLineIdx];
         let status = null;
-
-        // Search for status in the same line or immediate vicinity (next 2 lines)
         const nearbyText = lines.slice(bestLineIdx, bestLineIdx + 3).map(l => l.text).join(' ');
 
         if (nearbyText.includes('active') || nearbyText.includes('activ')) status = 'active';
@@ -1747,9 +1752,10 @@ async function captureAndAnalyze() {
       }
     });
 
-    // Execute updates
     for (const action of detectedActions) {
       let changed = false;
+      let finalStatus = action.status || 'item';
+
       if (scannerMode === 'quests_active') {
         if (action.status === 'completed' && !questsCompleted.has(action.item.id)) {
           questsCompleted.add(action.item.id);
@@ -1760,49 +1766,65 @@ async function captureAndAnalyze() {
           questsCompleted.delete(action.item.id);
           findRecursivePrerequisites(action.item.id).forEach(p => questsCompleted.add(p.id));
           changed = true;
+        } else if (!action.status) {
+          // Default to active if found name but no status clear
+          if (!questsActive.has(action.item.id) && !questsCompleted.has(action.item.id)) {
+            questsActive.add(action.item.id);
+            changed = true;
+            finalStatus = 'active';
+          }
         }
       } else if (scannerMode === 'kappa' && !kappaFound.has(action.item.id)) {
-        toggleKappa(action.item.id);
+        kappaFound.add(action.item.id);
         changed = true;
       } else if (scannerMode === 'hideout') {
         const current = getInventoryQty(action.item.id);
         if (current < action.item.totalCount) {
-          markHideoutItemAuto(action.item);
+          hideoutItemsInventory[action.item.id] = action.item.totalCount;
           changed = true;
         }
-      } else if (scannerMode === 'valuation') {
-        // For valuation we only care about the first match to show detail
-        stopScanner();
-        getEl('v-search').value = action.item.name;
-        searchValuationItems(action.item.name).then(() => showValuationDetail(action.item.id));
-        foundCount = 1;
-        break;
       }
 
+      resultsSummary.push({ name: action.item.name, status: finalStatus });
       if (changed) foundCount++;
     }
 
-    if (foundCount > 0) {
+    if (resultsSummary.length > 0) {
       saveQuests();
       saveKappa();
+      saveHideoutInventory();
       updateQuestStats();
       updateKappaStats();
       renderQuests();
       renderKappa();
       renderHideoutItemsView();
       updateHomeMini();
-      toast(`${foundCount} elementos detectados`, 't-found');
+
+      // Mostrar overlay de resultados
+      const resultsOverlay = document.getElementById('scanner-results');
+      const resultsList = document.getElementById('results-list');
+      const resultsCount = document.getElementById('results-count');
+
+      resultsCount.textContent = `Se han detectado ${resultsSummary.length} elementos:`;
+      resultsList.innerHTML = resultsSummary.map(res => `
+        <div class="res-item">
+            <span class="res-name">${res.name}</span>
+            <span class="res-status ${res.status}">${res.status.toUpperCase()}</span>
+        </div>
+      `).join('');
+
+      resultsOverlay.classList.add('active');
     } else {
-      toast("No se detectaron misiones", 't-unfound');
+      toast("No se detectaron misiones en la imagen", 't-unfound');
     }
 
   } catch (e) {
     console.warn('OCR Batch Error:', e);
-    toast("Error al analizar", 't-unfound');
+    toast("Error al analizar la captura", 't-unfound');
   } finally {
     scannerProcessing = false;
     if (overlay) overlay.classList.remove('active');
-    document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
+    if (btn) btn.disabled = false;
   }
 }
 
