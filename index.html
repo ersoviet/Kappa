@@ -3121,6 +3121,14 @@
             transform: scale(0.95);
         }
 
+        .btn-capture:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
         .scanner-actions {
             display: flex;
             align-items: center;
@@ -3129,20 +3137,86 @@
             margin-top: 1.5rem;
         }
 
-        .scanner-loading-overlay {
+        .scanner-loading-overlay,
+        .scanner-results-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(10, 12, 15, 0.98);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            backdrop-filter: blur(4px);
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            padding: 2rem;
+            text-align: center;
         }
 
-        .scanner-loading-overlay.active {
+        .scanner-loading-overlay.active,
+        .scanner-results-overlay.active {
             display: flex;
+        }
+
+        .results-container {
+            width: 100%;
+            max-width: 500px;
+            max-height: 60vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .results-header {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+
+        .res-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
+        }
+
+        .res-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .res-status {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .res-status.active {
+            color: var(--blue);
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid var(--blue);
+        }
+
+        .res-status.completed {
+            color: var(--green);
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid var(--green);
+        }
+
+        .res-status.item {
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.1);
+            border: 1px solid var(--gold);
         }
 
 
@@ -3960,21 +4034,32 @@
         <div class="scanner-footer">
             <div class="scanner-status" id="scanner-status" data-i18n="ui_scanner_init">Preparando cámara...</div>
             <div class="scanner-match-row">
-                <div class="scanner-match" id="scanner-match-name">Enfoca la lista y pulsa el botón</div>
-                <div class="scanner-status-badge" id="scanner-match-status"></div>
+                <div class="scanner-match" id="scanner-match-name">Enfoca la lista de misiones y pulsa el botón</div>
             </div>
             <div class="scanner-actions">
-                <button class="btn-scanner-close" onclick="stopScanner()" data-i18n="ui_scanner_close">CERRAR</button>
+                <button class="btn-scanner-close" onclick="stopScanner()">CERRAR</button>
                 <button class="btn-capture" id="btn-capture-action" onclick="captureAndAnalyze()">
-                    📸 CAPTURAR Y ANALIZAR
+                    📸 CAPTURAR Y ANALIZAR LISTA
                 </button>
             </div>
         </div>
 
         <div class="scanner-loading-overlay" id="scanner-loading">
             <div class="loader yellow-loader"></div>
-            <div class="loading-text" style="margin-top:1rem">ANALIZANDO TODAS LAS MISIONES...</div>
-            <div style="font-size:0.8rem; color:var(--text2); margin-top:0.5rem">Esto puede tardar unos segundos</div>
+            <div class="loading-text" style="margin-top:1.5rem">ANALIZANDO CAPTURA...</div>
+            <div style="font-size:0.9rem; color:var(--text3); margin-top:0.5rem">Identificando misiones y estados</div>
+        </div>
+
+        <div class="scanner-results-overlay" id="scanner-results">
+            <div class="results-header">ANÁLISIS COMPLETADO</div>
+            <div id="results-count" style="color:var(--text2); font-size:0.9rem">Se han detectado las siguientes
+                misiones:</div>
+            <div class="results-container">
+                <div id="results-list"></div>
+            </div>
+            <div style="display:flex; gap:1rem">
+                <button class="btn-scanner-close" onclick="closeScannerResults()">ACEPTAR</button>
+            </div>
         </div>
         <!-- Hidden canvas for OCR -->
         <canvas id="scanner-canvas" style="display:none"></canvas>
