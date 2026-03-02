@@ -1702,10 +1702,121 @@ async function scannerLoop() {
   requestAnimationFrame(scannerLoop);
 }
 
+async function captureAndAnalyze() {
+  if (scannerProcessing) return;
+  const overlay = document.getElementById('scanner-loading');
+  if (overlay) overlay.classList.add('active');
+
+  scannerProcessing = true;
+
+  const video = document.getElementById('scanner-video');
+  const canvas = document.getElementById('scanner-canvas');
+  if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    scannerProcessing = false;
+    if (overlay) overlay.classList.remove('active');
+    return;
+  }
+
+  // Capturamos el frame completo a alta resolución
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  try {
+    document.getElementById('scanner-status').textContent = "Procesando imagen completa...";
+    const { data: { text } } = await tesseractWorker.recognize(canvas);
+
+    // Convertimos a líneas para analizar una por una
+    const lines = text.split('\n').map(l => l.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ''));
+    let foundCount = 0;
+    let candidates = [];
+
+    if (scannerMode === 'kappa') candidates = kappaItems;
+    else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
+    else if (scannerMode === 'quests_active') candidates = quests;
+
+    // Analizar múltiples misiones en el texto detectado
+    const detectedMatches = [];
+
+    // Buscamos candidatos en el bloque de texto
+    candidates.forEach(item => {
+      const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, '');
+      if (itemName.length < 4) return; // Evitar falsos positivos cortos
+
+      // Buscamos si el nombre de la misión aparece en alguna línea
+      const matchingLineIndex = lines.findIndex(line => line.includes(itemName) || itemName.includes(line) && line.length > 5);
+
+      if (matchingLineIndex !== -1) {
+        const line = lines[matchingLineIndex];
+        // Intentar detectar estado cerca de esa línea o en ella
+        let status = null;
+        // Buscamos en la misma línea o la siguiente (a veces el estado está debajo o al lado)
+        const contextText = (line + " " + (lines[matchingLineIndex + 1] || "")).toLowerCase();
+
+        if (contextText.includes('active') || contextText.includes('activ')) status = 'active';
+        else if (contextText.includes('complet')) status = 'completed';
+
+        detectedMatches.push({ item, status });
+      }
+    });
+
+    // Aplicar cambios detectados
+    for (const match of detectedMatches) {
+      let changed = false;
+      if (scannerMode === 'quests_active') {
+        if (match.status === 'active' && !questsActive.has(match.item.id)) {
+          questsActive.add(match.item.id);
+          questsCompleted.delete(match.item.id);
+          findRecursivePrerequisites(match.item.id).forEach(p => {
+            questsCompleted.add(p.id);
+            questsActive.delete(p.id);
+          });
+          changed = true;
+        } else if (match.status === 'completed' && !questsCompleted.has(match.item.id)) {
+          questsCompleted.add(match.item.id);
+          questsActive.delete(match.item.id);
+          changed = true;
+        }
+      } else if (scannerMode === 'kappa' && !kappaFound.has(match.item.id)) {
+        kappaFound.add(match.item.id);
+        changed = true;
+      }
+
+      if (changed) foundCount++;
+    }
+
+    if (foundCount > 0) {
+      saveQuests();
+      saveKappa();
+      updateQuestStats();
+      updateKappaStats();
+      renderQuests();
+      renderKappa();
+      updateHomeMini();
+      toast(`Escaneo completado: ${foundCount} actualizaciones`, 't-found');
+      visualFeedback(true);
+    } else {
+      toast("No se detectaron nuevas misiones", 't-unfound');
+    }
+
+  } catch (e) {
+    console.warn('Batch OCR Error:', e);
+    toast("Error al analizar la imagen", 't-unfound');
+  } finally {
+    scannerProcessing = false;
+    if (overlay) overlay.classList.remove('active');
+    document.getElementById('scanner-status').textContent = i18n[currentLang].ui_scanner_realtime;
+  }
+}
+
 async function processFrame() {
   const video = document.getElementById('scanner-video');
   const frame = document.querySelector('.scanner-frame');
   if (!video || !frame || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+  // En modo manual, solo actualizamos el visualizador, no procesamos OCR automáticamente
+  if (true) return; // Desactivamos el procesamiento automático por frames para centrarlo en captura manual
 
   scannerProcessing = true;
 
