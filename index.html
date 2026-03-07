@@ -3223,20 +3223,19 @@
         }
 
         .res-status-select {
-            background: rgba(25, 30, 35, 0.8);
-            border: 1px solid var(--border);
+            background: rgba(40, 45, 55, 0.9);
+            border: 1px solid var(--gold);
             color: var(--text);
-            border-radius: 6px;
-            padding: 5px 10px;
+            border-radius: 8px;
+            padding: 6px 30px 6px 12px;
             font-size: 0.85rem;
             font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             outline: none;
             transition: all var(--tr);
-            appearance: none;
-            -webkit-appearance: none;
-            text-align: center;
+            /* Quitamos el appearance:none para que se vea la flecha del sistema y sea obvio que es un dropdown */
+            text-align: left;
         }
 
         .res-status-select:hover {
@@ -4058,6 +4057,11 @@
                     <div class="scanner-corner top-right"></div>
                     <div class="scanner-corner bot-left"></div>
                     <div class="scanner-corner bot-right"></div>
+                </div>
+                <!-- Indicador de enfoque -->
+                <div
+                    style="position:absolute; bottom:15%; left:50%; transform:translateX(-50%); color:var(--gold); font-size:0.7rem; font-family:'Rajdhani'; opacity:0.8; background:rgba(0,0,0,0.4); padding:4px 12px; border-radius:99px; pointer-events:none;">
+                    👆 PULSA PARA ENFOCAR
                 </div>
             </div>
             <div class="scanner-log" id="scanner-log"></div>

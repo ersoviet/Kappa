@@ -1774,18 +1774,16 @@ async function captureAndAnalyze() {
         if (nearbyText.includes('active') || nearbyText.includes('activ')) status = 'active';
         else if (nearbyText.includes('complet')) status = 'completed';
 
-        let finalStatus = status || 'item';
-
-        // Determinar status por defecto si no se detecta
-        if (scannerMode === 'quests_active' && finalStatus === 'item') {
-          finalStatus = 'active';
+        let finalStatus = status;
+        if (!finalStatus) {
+          finalStatus = (scannerMode === 'quests_active') ? 'active' : 'item';
         }
 
         currentScannerResults.push({
           id: item.id,
           name: item.name,
           status: finalStatus,
-          type: scannerMode,
+          type: (item.minPlayerLevel !== undefined || scannerMode === 'quests_active') ? 'quest' : 'item',
           item: item
         });
       }
@@ -1818,27 +1816,27 @@ function renderScannerResults() {
   resultsCount.textContent = `Se han detectado ${currentScannerResults.length} elementos (puedes ajustar el estado si es incorrecto):`;
 
   resultsList.innerHTML = currentScannerResults.map((res, idx) => {
-    let options = '';
-    if (res.type === 'quests_active') {
-      options = `
-            <option value="active" ${res.status === 'active' ? 'selected' : ''}>${currentLang === 'es' ? 'Activa' : 'Active'}</option>
-            <option value="completed" ${res.status === 'completed' ? 'selected' : ''}>${currentLang === 'es' ? 'Completada' : 'Completed'}</option>
-        `;
+    let actionsHtml = '';
+
+    if (res.type === 'quest') {
+      const isEs = currentLang === 'es';
+      actionsHtml = `
+        <select class="res-status-select" onchange="updateScannedItemStatus(${idx}, this.value)">
+            <option value="active" ${res.status === 'active' ? 'selected' : ''}>${isEs ? '🔥 ACTIVA' : '🔥 ACTIVE'}</option>
+            <option value="completed" ${res.status === 'completed' ? 'selected' : ''}>${isEs ? '✅ HECHA' : '✅ DONE'}</option>
+        </select>
+      `;
     } else {
-      options = `<option value="item" selected>Dectectado</option>`;
+      actionsHtml = `<span class="res-status ${res.status}">${res.status.toUpperCase()}</span>`;
     }
 
     return `
       <div class="res-item">
-          <span class="res-name">${res.name}</span>
+          <div class="res-info">
+              <span class="res-name">${res.name}</span>
+          </div>
           <div class="res-actions">
-              ${res.type === 'quests_active' ? `
-                <select class="res-status-select" onchange="updateScannedItemStatus(${idx}, this.value)">
-                    ${options}
-                </select>
-              ` : `
-                <span class="res-status ${res.status}">${res.status.toUpperCase()}</span>
-              `}
+              ${actionsHtml}
           </div>
       </div>
     `;
@@ -1858,7 +1856,7 @@ function updateScannedItemStatus(index, newStatus) {
 function applyScannerResults() {
   let changed = false;
   for (const res of currentScannerResults) {
-    if (res.type === 'quests_active') {
+    if (res.type === 'quest') {
       if (res.status === 'completed' && !questsCompleted.has(res.id)) {
         questsCompleted.add(res.id);
         questsActive.delete(res.id);
@@ -1866,18 +1864,19 @@ function applyScannerResults() {
       } else if (res.status === 'active' && !questsActive.has(res.id)) {
         questsActive.add(res.id);
         questsCompleted.delete(res.id);
-        // Prerrequisitos automáticos
         findRecursivePrerequisites(res.id).forEach(p => questsCompleted.add(p.id));
         changed = true;
       }
-    } else if (res.type === 'kappa' && !kappaFound.has(res.id)) {
-      kappaFound.add(res.id);
-      changed = true;
-    } else if (res.type === 'hideout') {
-      const current = getInventoryQty(res.id);
-      if (current < res.item.totalCount) {
-        hideoutItemsInventory[res.id] = res.item.totalCount;
+    } else if (res.type === 'item') {
+      if (scannerMode === 'kappa' && !kappaFound.has(res.id)) {
+        kappaFound.add(res.id);
         changed = true;
+      } else if (scannerMode === 'hideout') {
+        const current = getInventoryQty(res.id);
+        if (current < res.item.totalCount) {
+          hideoutItemsInventory[res.id] = res.item.totalCount;
+          changed = true;
+        }
       }
     }
   }
