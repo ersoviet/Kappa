@@ -2926,7 +2926,9 @@
         #scanner-video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            /* Cambiado de cover para que el usuario vea toda la captura */
+            background: #000;
         }
 
         .scanner-overlay {
@@ -3217,6 +3219,35 @@
             color: var(--gold);
             background: rgba(201, 168, 76, 0.1);
             border: 1px solid var(--gold);
+            border-radius: 4px;
+        }
+
+        .res-status-select {
+            background: rgba(25, 30, 35, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--tr);
+            appearance: none;
+            -webkit-appearance: none;
+            text-align: center;
+        }
+
+        .res-status-select:hover {
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .res-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
 
@@ -4020,7 +4051,7 @@
             <div id="scanner-type-label">MODO: KAPPA</div>
         </div>
         <div class="scanner-viewport">
-            <video id="scanner-video" autoplay playsinline muted></video>
+            <video id="scanner-video" autoplay playsinline muted onclick="focusCamera()"></video>
             <div class="scanner-overlay">
                 <div class="scanner-frame">
                     <div class="scanner-corner top-left"></div>

@@ -227,7 +227,9 @@ const i18n = {
     ui_gamemode: "MODO DE JUEGO:",
     ui_pvp: "PvP (Regular)",
     ui_pve: "PvE",
-    ui_syncing: "Sincronizando..."
+    ui_syncing: "Sincronizando...",
+    toast_focus: "Enfocando...",
+    toast_no_detect: "No se detectaron elementos en la imagen"
   },
   en: {
     nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
@@ -350,7 +352,9 @@ const i18n = {
     ui_gamemode: "GAME MODE:",
     ui_pvp: "PvP (Regular)",
     ui_pve: "PvE",
-    ui_syncing: "Syncing..."
+    ui_syncing: "Syncing...",
+    toast_focus: "Focusing...",
+    toast_no_detect: "No elements detected in image"
   }
 };
 
@@ -1628,11 +1632,11 @@ document.getElementById('btn-reset-quests')?.addEventListener('click', () => {
 // OCR SCANNER MODULE
 // ═══════════════════════════════════════════════════
 let scannerActive = false;
-let scannerMode = 'kappa'; // 'kappa' | 'hideout'
+let scannerMode = 'kappa'; // 'kappa' | 'hideout' | 'quests_active'
 let scannerStream = null;
 let tesseractWorker = null;
 let scannerProcessing = false;
-let scannerCooldown = 0;
+let currentScannerResults = []; // Almacena los resultados del escaneo actual
 
 async function initTesseract() {
   if (tesseractWorker) return;
@@ -1685,6 +1689,32 @@ function stopScanner() {
   document.getElementById('scanner-modal').classList.remove('active');
   document.getElementById('scanner-loading').classList.remove('active');
   document.getElementById('scanner-results').classList.remove('active');
+  currentScannerResults = [];
+}
+
+async function focusCamera() {
+  if (!scannerStream) return;
+  const track = scannerStream.getVideoTracks()[0];
+  if (!track) return;
+
+  try {
+    const capabilities = track.getCapabilities();
+    const constraints = {};
+
+    // Algunos navegadores soportan focusMode en advanced constraints
+    if (capabilities.focusMode) {
+      const mode = capabilities.focusMode.includes('continuous') ? 'continuous' : 'manual';
+      await track.applyConstraints({
+        advanced: [{ focusMode: mode }]
+      });
+      toast(i18n[currentLang].toast_focus, 't-found');
+    } else {
+      // Fallback: re-aplicar constraints de video básicos a veces fuerza el enfoque
+      await track.applyConstraints({ video: true });
+    }
+  } catch (e) {
+    console.warn('Enfoque manual no soportado:', e);
+  }
 }
 
 function closeScannerResults() {
@@ -1701,6 +1731,7 @@ async function captureAndAnalyze() {
   if (btn) btn.disabled = true;
 
   scannerProcessing = true;
+  currentScannerResults = [];
 
   const video = document.getElementById('scanner-video');
   const canvas = document.getElementById('scanner-canvas');
@@ -1724,16 +1755,11 @@ async function captureAndAnalyze() {
       bbox: line.bbox
     })).filter(l => l.text.length > 2);
 
-    let foundCount = 0;
     let candidates = [];
-
     if (scannerMode === 'kappa') candidates = kappaItems;
     else if (scannerMode === 'hideout') candidates = consolidatedHideoutItems;
     else if (scannerMode === 'quests_active') candidates = quests;
     else if (scannerMode === 'valuation') candidates = [...kappaItems, ...consolidatedHideoutItems];
-
-    const detectedActions = [];
-    const resultsSummary = [];
 
     candidates.forEach(item => {
       const itemName = (item.shortName || item.name).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
@@ -1748,83 +1774,124 @@ async function captureAndAnalyze() {
         if (nearbyText.includes('active') || nearbyText.includes('activ')) status = 'active';
         else if (nearbyText.includes('complet')) status = 'completed';
 
-        detectedActions.push({ item, status });
+        let finalStatus = status || 'item';
+
+        // Determinar status por defecto si no se detecta
+        if (scannerMode === 'quests_active' && finalStatus === 'item') {
+          finalStatus = 'active';
+        }
+
+        currentScannerResults.push({
+          id: item.id,
+          name: item.name,
+          status: finalStatus,
+          type: scannerMode,
+          item: item
+        });
       }
     });
 
-    for (const action of detectedActions) {
-      let changed = false;
-      let finalStatus = action.status || 'item';
+    if (currentScannerResults.length > 0) {
+      applyScannerResults();
+      renderScannerResults();
 
-      if (scannerMode === 'quests_active') {
-        if (action.status === 'completed' && !questsCompleted.has(action.item.id)) {
-          questsCompleted.add(action.item.id);
-          questsActive.delete(action.item.id);
-          changed = true;
-        } else if (action.status === 'active' && !questsActive.has(action.item.id)) {
-          questsActive.add(action.item.id);
-          questsCompleted.delete(action.item.id);
-          findRecursivePrerequisites(action.item.id).forEach(p => questsCompleted.add(p.id));
-          changed = true;
-        } else if (!action.status) {
-          // Default to active if found name but no status clear
-          if (!questsActive.has(action.item.id) && !questsCompleted.has(action.item.id)) {
-            questsActive.add(action.item.id);
-            changed = true;
-            finalStatus = 'active';
-          }
-        }
-      } else if (scannerMode === 'kappa' && !kappaFound.has(action.item.id)) {
-        kappaFound.add(action.item.id);
-        changed = true;
-      } else if (scannerMode === 'hideout') {
-        const current = getInventoryQty(action.item.id);
-        if (current < action.item.totalCount) {
-          hideoutItemsInventory[action.item.id] = action.item.totalCount;
-          changed = true;
-        }
-      }
-
-      resultsSummary.push({ name: action.item.name, status: finalStatus });
-      if (changed) foundCount++;
-    }
-
-    if (resultsSummary.length > 0) {
-      saveQuests();
-      saveKappa();
-      saveHideoutInventory();
-      updateQuestStats();
-      updateKappaStats();
-      renderQuests();
-      renderKappa();
-      renderHideoutItemsView();
-      updateHomeMini();
-
-      // Mostrar overlay de resultados
       const resultsOverlay = document.getElementById('scanner-results');
-      const resultsList = document.getElementById('results-list');
-      const resultsCount = document.getElementById('results-count');
-
-      resultsCount.textContent = `Se han detectado ${resultsSummary.length} elementos:`;
-      resultsList.innerHTML = resultsSummary.map(res => `
-        <div class="res-item">
-            <span class="res-name">${res.name}</span>
-            <span class="res-status ${res.status}">${res.status.toUpperCase()}</span>
-        </div>
-      `).join('');
-
       resultsOverlay.classList.add('active');
     } else {
-      toast("No se detectaron misiones en la imagen", 't-unfound');
+      toast(i18n[currentLang].toast_no_detect, 't-unfound');
     }
 
   } catch (e) {
-    console.warn('OCR Batch Error:', e);
+    console.warn('OCR Error:', e);
     toast("Error al analizar la captura", 't-unfound');
   } finally {
     scannerProcessing = false;
     if (overlay) overlay.classList.remove('active');
     if (btn) btn.disabled = false;
+  }
+}
+
+function renderScannerResults() {
+  const resultsList = document.getElementById('results-list');
+  const resultsCount = document.getElementById('results-count');
+
+  resultsCount.textContent = `Se han detectado ${currentScannerResults.length} elementos (puedes ajustar el estado si es incorrecto):`;
+
+  resultsList.innerHTML = currentScannerResults.map((res, idx) => {
+    let options = '';
+    if (res.type === 'quests_active') {
+      options = `
+            <option value="active" ${res.status === 'active' ? 'selected' : ''}>${currentLang === 'es' ? 'Activa' : 'Active'}</option>
+            <option value="completed" ${res.status === 'completed' ? 'selected' : ''}>${currentLang === 'es' ? 'Completada' : 'Completed'}</option>
+        `;
+    } else {
+      options = `<option value="item" selected>Dectectado</option>`;
+    }
+
+    return `
+      <div class="res-item">
+          <span class="res-name">${res.name}</span>
+          <div class="res-actions">
+              ${res.type === 'quests_active' ? `
+                <select class="res-status-select" onchange="updateScannedItemStatus(${idx}, this.value)">
+                    ${options}
+                </select>
+              ` : `
+                <span class="res-status ${res.status}">${res.status.toUpperCase()}</span>
+              `}
+          </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateScannedItemStatus(index, newStatus) {
+  const res = currentScannerResults[index];
+  if (!res) return;
+
+  // Revertir estado anterior si es necesario (aunque applyScannerResults se llama de nuevo)
+  res.status = newStatus;
+  applyScannerResults();
+  toast(`${res.name} -> ${newStatus.toUpperCase()}`, 't-built');
+}
+
+function applyScannerResults() {
+  let changed = false;
+  for (const res of currentScannerResults) {
+    if (res.type === 'quests_active') {
+      if (res.status === 'completed' && !questsCompleted.has(res.id)) {
+        questsCompleted.add(res.id);
+        questsActive.delete(res.id);
+        changed = true;
+      } else if (res.status === 'active' && !questsActive.has(res.id)) {
+        questsActive.add(res.id);
+        questsCompleted.delete(res.id);
+        // Prerrequisitos automáticos
+        findRecursivePrerequisites(res.id).forEach(p => questsCompleted.add(p.id));
+        changed = true;
+      }
+    } else if (res.type === 'kappa' && !kappaFound.has(res.id)) {
+      kappaFound.add(res.id);
+      changed = true;
+    } else if (res.type === 'hideout') {
+      const current = getInventoryQty(res.id);
+      if (current < res.item.totalCount) {
+        hideoutItemsInventory[res.id] = res.item.totalCount;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    saveQuests();
+    saveKappa();
+    saveHideoutInventory();
+    updateQuestStats();
+    updateKappaStats();
+    renderQuests();
+    renderKappa();
+    renderHideoutItemsView();
+    updateHomeMini();
   }
 }
 
