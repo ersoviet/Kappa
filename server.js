@@ -52,6 +52,7 @@ async function initDB() {
       hideout_inventory TEXT DEFAULT '{}',
       quests_completed TEXT DEFAULT '[]',
       quests_active TEXT DEFAULT '[]',
+      blocked_unlocked TEXT DEFAULT '[]',
       player_level INTEGER DEFAULT 1,
       target_quest_id TEXT DEFAULT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -69,6 +70,10 @@ async function initDB() {
 
     try {
         db.run(`ALTER TABLE profiles ADD COLUMN quests_active TEXT DEFAULT '[]'`);
+    } catch (e) { }
+
+    try {
+        db.run(`ALTER TABLE profiles ADD COLUMN blocked_unlocked TEXT DEFAULT '[]'`);
     } catch (e) { }
 
     saveDB();
@@ -192,7 +197,7 @@ app.get('/api/profiles', (req, res) => {
     const profiles = getAll(`
     SELECT u.id, u.username, u.created_at,
            p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.quests_active, 
-           p.player_level, p.target_quest_id, p.updated_at
+           p.blocked_unlocked, p.player_level, p.target_quest_id, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     ORDER BY u.username
@@ -208,6 +213,7 @@ app.get('/api/profiles', (req, res) => {
         hideout_inventory: JSON.parse(p.hideout_inventory || '{}'),
         quests_completed: JSON.parse(p.quests_completed || '[]'),
         quests_active: JSON.parse(p.quests_active || '[]'),
+        blocked_unlocked: JSON.parse(p.blocked_unlocked || '[]'),
         player_level: p.player_level || 1,
         target_quest_id: p.target_quest_id
     })));
@@ -218,7 +224,7 @@ app.get('/api/profiles/:id', (req, res) => {
     const profile = getRow(`
     SELECT u.id, u.username, u.created_at,
            p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.quests_active, 
-           p.player_level, p.target_quest_id, p.updated_at
+           p.blocked_unlocked, p.player_level, p.target_quest_id, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     WHERE u.id = ?
@@ -238,6 +244,7 @@ app.get('/api/profiles/:id', (req, res) => {
         hideout_inventory: JSON.parse(profile.hideout_inventory || '{}'),
         quests_completed: JSON.parse(profile.quests_completed || '[]'),
         quests_active: JSON.parse(profile.quests_active || '[]'),
+        blocked_unlocked: JSON.parse(profile.blocked_unlocked || '[]'),
         player_level: profile.player_level || 1,
         target_quest_id: profile.target_quest_id
     });
@@ -246,7 +253,7 @@ app.get('/api/profiles/:id', (req, res) => {
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
     try {
-        const { kappa_found, hideout_built, hideout_inventory, quests_completed, quests_active, player_level, target_quest_id } = req.body;
+        const { kappa_found, hideout_built, hideout_inventory, quests_completed, quests_active, blocked_unlocked, player_level, target_quest_id } = req.body;
 
         const sets = [];
         const params = [];
@@ -270,6 +277,10 @@ app.put('/api/profile', authenticateToken, (req, res) => {
         if (quests_active !== undefined) {
             sets.push('quests_active = ?');
             params.push(JSON.stringify(quests_active));
+        }
+        if (blocked_unlocked !== undefined) {
+            sets.push('blocked_unlocked = ?');
+            params.push(JSON.stringify(blocked_unlocked));
         }
         if (player_level !== undefined) {
             sets.push('player_level = ?');

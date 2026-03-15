@@ -3568,6 +3568,19 @@
                     y mejores ventas a comerciantes.</div>
                 <div class="module-status-tag" data-i18n="home_valuation_tag">Live Flea Prices</div>
             </div>
+
+            <div class="module-card blocked" onclick="navigate('blocked')">
+                <span class="module-icon">🔒</span>
+                <div class="module-title" data-i18n="home_blocked_title">BLOQUEOS</div>
+                <div class="module-desc" data-i18n="home_blocked_desc">Items y equipamientos bloqueados por misiones o nivel.</div>
+                <div class="module-mini-progress">
+                    <div class="mini-prog-label"><span data-i18n="home_stats_unlocked">DESBLOQUEADOS</span> <span
+                            id="home-blocked-pct">0%</span></div>
+                    <div class="mini-prog-bar">
+                        <div id="home-blocked-fill" class="mini-prog-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="home-version">tarkov.dev API — EFT Tracker v3.0</div>
     </div>
@@ -3590,6 +3603,8 @@
                     data-i18n="nav_quests">MISIONES</button>
                 <button class="nav-tab" id="nav-valuation" onclick="navigate('valuation')"
                     data-i18n="nav_prices">PRECIOS</button>
+                <button class="nav-tab" id="nav-blocked" onclick="navigate('blocked')"
+                    data-i18n="nav_blocked">BLOQUEOS</button>
             </nav>
             <div class="header-progress">
                 <div class="prog-label"><span id="header-prog-label">PROGRESO</span><strong id="header-prog-val">0 /
@@ -3947,6 +3962,64 @@
             <div id="v-initial-state" style="text-align:center; padding:4rem 0; opacity:0.5;">
                 <div style="font-size:4rem; margin-bottom:1rem;">⚖️</div>
                 <p data-i18n="ui_valuation_init_p">Busca un ítem o usa la cámara para ver su valor actual</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════ BLOCKED PAGE ═══════════════════════ -->
+    <div id="page-blocked" class="page">
+        <div class="mod-page">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon total">🔒</div>
+                    <div>
+                        <div class="stat-number total" id="b-total">0</div>
+                        <div class="stat-label" data-i18n="stat_total_blocked">Total Bloqueos</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon found" style="background: rgba(74, 222, 128, .12)">🔓</div>
+                    <div>
+                        <div class="stat-number found" style="color:var(--green)" id="b-unlocked">0</div>
+                        <div class="stat-label" data-i18n="stat_unlocked">Desbloqueados</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon remaining" style="background: rgba(248, 113, 113, .1)">⏳</div>
+                    <div>
+                        <div class="stat-number remaining" style="color:var(--red)" id="b-locked">0</div>
+                        <div class="stat-label" data-i18n="stat_locked">Bloqueados</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="b-search" placeholder="Buscar item bloqueado..." data-i18n="ui_search_blocked" oninput="searchBlockedItems(this.value)" />
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" id="b-filter-all" data-filter="all" data-i18n="ui_all">Todos</button>
+                    <button class="filter-tab found-tab" id="b-filter-unlocked" data-filter="unlocked" data-i18n="stat_unlocked">Desbloqueados</button>
+                    <button class="filter-tab" id="b-filter-locked" data-filter="locked" data-i18n="stat_locked">Bloqueados</button>
+                    <button class="filter-tab" id="b-filter-quests" data-filter="quests" data-i18n="nav_quests">Misiones</button>
+                    <button class="filter-tab" id="b-filter-level" data-filter="level" data-i18n="ui_level">Niveles</button>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title" data-i18n="ui_blocked_items_title">Lista de Extracción</span>
+                <div class="section-line"></div>
+                <span class="section-count" id="b-count">0 items</span>
+            </div>
+            
+            <div id="b-loading" class="loading-screen" style="display:none">
+                <div class="loader yellow-loader"></div>
+                <div class="loading-text" data-i18n="ui_loading_blocked">Cargando ítems bloqueados...</div>
+            </div>
+
+            <div class="items-grid" id="b-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                <!-- Blocked items go here -->
             </div>
         </div>
     </div>

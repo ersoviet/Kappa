@@ -99,6 +99,13 @@ let selectedValuationItem = null;
 // Modal state
 let currentModalItem = null;
 
+// Blocked state
+let blockedItemsData = [];
+let blockedSearch = '';
+let blockedFilter = 'all'; // 'all', 'unlocked', 'locked', 'quests', 'level'
+const BLOCKED_STORAGE = 'blocked_tracker_v1';
+let blockedUnlocked = new Set();
+
 // ═══════ AUTH & PROFILE STATE ═══════
 let authToken = localStorage.getItem('eft_auth_token') || null;
 let currentUser = null; // { id, username }
@@ -143,6 +150,12 @@ const i18n = {
     stat_total_items: "Total Items", stat_found: "Encontrados",
     stat_total_levels: "Total Niveles", stat_built: "Construidos", stat_pending: "Pendientes",
     stat_complete: "Completos", stat_missing: "Faltantes", stat_total_quests: "Total Misiones",
+    stat_total_blocked: "Total Bloqueos", stat_unlocked: "Desbloqueados", stat_locked: "Bloqueados",
+    ui_search_blocked: "Buscar item bloqueado...", ui_blocked_items_title: "Lista de Extracción",
+    ui_loading_blocked: "Cargando ítems bloqueados...", nav_blocked: "BLOQUEOS",
+    home_blocked_title: "BLOQUEOS", home_blocked_desc: "Items y equipamientos bloqueados por misiones o nivel.",
+    home_stats_unlocked: "DESBLOQUEADOS", ui_unlocked_by: "Desbloqueado por: ",
+    ui_requires_trader_level: "Requiere nivel {0} en {1}", ui_requires_quest: "Requiere misión: {0}",
     ui_back_to_stations: "Volver a Estaciones", ui_kappa_needed_title: "Items Necesarios",
     ui_search_quest: "Buscar misión por nombre...", ui_my_level: "MI NIVEL:", ui_delete: "BORRAR",
     ui_filter_all_f: "Todas", ui_filter_locked: "Bloqueadas", ui_filter_available: "Disponibles", ui_filter_completed: "Hechas", ui_filter_kappa: "Kappa",
@@ -266,6 +279,12 @@ const i18n = {
     stat_complete: "Complete", stat_missing: "Missing", stat_total_quests: "Total Quests",
     stat_completed: "Completed", stat_unique_items: "Unique Items", ui_search_item: "Search item...",
     ui_loading_kappa: "Loading Kappa...", ui_loading_hideout: "Loading Hideout...", ui_loading_quests: "Loading Quests...",
+    stat_total_blocked: "Total Blocked", stat_unlocked: "Unlocked", stat_locked: "Locked",
+    ui_search_blocked: "Search blocked item...", ui_blocked_items_title: "Extraction List",
+    ui_loading_blocked: "Loading blocked items...", nav_blocked: "BLOCKED",
+    home_blocked_title: "BLOCKED", home_blocked_desc: "Items and gear locked behind quests or levels.",
+    home_stats_unlocked: "UNLOCKED", ui_unlocked_by: "Unlocked by: ",
+    ui_requires_trader_level: "Requires level {0} for {1}", ui_requires_quest: "Requires quest: {0}",
     ui_retry: "Retry", ui_stations: "Stations", ui_items_list: "Items List",
     ui_stations_title: "Hideout Stations", ui_hideout_items_title: "Hideout Items",
     ui_back_to_stations: "Back to Stations", ui_kappa_needed_title: "Required Items",
@@ -457,6 +476,9 @@ function updateHeader() {
   } else if (currentPage === 'valuation') {
     logo.innerHTML = `<span style="color:#a855f7">⚖️ ${i18n[currentLang].nav_prices}</span>`;
     progLabel.textContent = i18n[currentLang].header_prog_valuation;
+  } else if (currentPage === 'blocked') {
+    logo.innerHTML = `🔒 ${i18n[currentLang].nav_blocked}`;
+    progLabel.textContent = i18n[currentLang].stat_unlocked;
   }
 }
 
@@ -515,6 +537,14 @@ function loadQuests_storage() {
   } catch { }
 }
 
+function saveBlocked() {
+  localStorage.setItem(BLOCKED_STORAGE, JSON.stringify([...blockedUnlocked]));
+  syncProfileToServer();
+}
+function loadBlocked_storage() {
+  try { const s = localStorage.getItem(BLOCKED_STORAGE); if (s) blockedUnlocked = new Set(JSON.parse(s)); } catch { }
+}
+
 // Sync current state to server (debounced)
 let _syncTimeout = null;
 function syncProfileToServer() {
@@ -535,6 +565,7 @@ function syncProfileToServer() {
           hideout_inventory: hideoutItemsInventory,
           quests_completed: [...questsCompleted],
           quests_active: [...questsActive],
+          blocked_unlocked: [...blockedUnlocked],
           player_level: playerLevel,
           target_quest_id: targetQuestId
         })
@@ -707,6 +738,7 @@ function logout() {
   loadKappa_storage();
   loadHideout_storage();
   loadHideoutInventory_storage();
+  loadBlocked_storage();
   toast(i18n[currentLang].toast_logout, 't-unfound');
   updateAuthUI();
   updateHomeMini();
@@ -725,6 +757,7 @@ async function syncProfileToServerImmediate() {
         hideout_inventory: hideoutItemsInventory,
         quests_completed: [...questsCompleted],
         quests_active: [...questsActive],
+        blocked_unlocked: [...blockedUnlocked],
         player_level: playerLevel,
         target_quest_id: targetQuestId
       })
@@ -744,6 +777,7 @@ async function loadProfileFromServer(profileId) {
     hideoutItemsInventory = profile.hideout_inventory || {};
     questsCompleted = new Set(profile.quests_completed || []);
     questsActive = new Set(profile.quests_active || []);
+    blockedUnlocked = new Set(profile.blocked_unlocked || []);
     playerLevel = profile.player_level || 1;
     targetQuestId = profile.target_quest_id || null;
     // Also update localStorage
@@ -756,6 +790,7 @@ async function loadProfileFromServer(profileId) {
       level: playerLevel,
       target: targetQuestId
     }));
+    localStorage.setItem(BLOCKED_STORAGE, JSON.stringify([...blockedUnlocked]));
 
   } catch (e) {
     console.warn('Error loading profile:', e);
@@ -812,6 +847,7 @@ async function switchProfile(profileId) {
     hideoutItemsInventory = profile.hideout_inventory || {};
     questsCompleted = new Set(profile.quests_completed || []);
     questsActive = new Set(profile.quests_active || []);
+    blockedUnlocked = new Set(profile.blocked_unlocked || []);
     playerLevel = profile.player_level || 1;
     targetQuestId = profile.target_quest_id || null;
     if (getEl('player-level-input')) getEl('player-level-input').value = playerLevel;
@@ -841,6 +877,9 @@ function refreshCurrentPage() {
   } else if (currentPage === 'quests' && quests.length) {
     updateQuestStats();
     renderQuests();
+  } else if (currentPage === 'blocked' && blockedItemsData.length) {
+    updateBlockedStats();
+    renderBlockedItems();
   }
 }
 
@@ -939,6 +978,12 @@ function navigate(page) {
     const nVal = getEl('nav-valuation'); if (nVal) nVal.className = 'nav-tab active-valuation';
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'valuation';
     const hFill = getEl('header-prog-fill'); if (hFill) { hFill.className = 'prog-bar-fill valuation'; hFill.style.background = '#a855f7'; hFill.style.width = '100%'; }
+  } else if (page === 'blocked') {
+    const pBlocked = getEl('page-blocked'); if (pBlocked) pBlocked.classList.add('active');
+    const nBlocked = getEl('nav-blocked'); if (nBlocked) nBlocked.className = 'nav-tab active';
+    const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'red';
+    const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill red';
+    if (!blockedItemsData.length) loadBlockedItemsData(); else { updateBlockedStats(); renderBlockedItems(); }
   }
 }
 
@@ -2619,6 +2664,184 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ═══════════════════════════════
+// BLOCKED MODULE
+// ═══════════════════════════════
+const BLOCKED_QUERY = `query GetBlocked($lang: LanguageCode, $gameMode: GameMode) {
+  traders(lang: $lang, gameMode: $gameMode) {
+    id name
+    levels { level requiredPlayerLevel requiredReputation }
+    cashOffers {
+      minTraderLevel
+      taskUnlock { id name }
+      item { id name shortName iconLink basePrice }
+    }
+    barters {
+      level
+      taskUnlock { id name }
+      rewardItems { item { id name shortName iconLink basePrice } }
+    }
+  }
+}`;
+
+async function loadBlockedItemsData() {
+  setDisp('b-loading', 'flex');
+  getEl('b-grid').innerHTML = '';
+  try {
+    const data = await fetchWithCache(BLOCKED_QUERY, 'eft_cache_blocked_v1', { lang: currentLang, gameMode });
+    const itemsMap = new Map();
+
+    data.traders.forEach(trader => {
+      const processOffer = (offer, isBarter) => {
+        if (!offer.taskUnlock && !offer.minTraderLevel && !offer.level) return;
+        const items = isBarter ? (offer.rewardItems || []).map(r => r.item) : (offer.item ? [offer.item] : []);
+
+        items.forEach(item => {
+          if (!item || !item.id) return;
+          const reqLevel = offer.minTraderLevel || offer.level || 1;
+          const traderLvlData = trader.levels.find(l => l.level === reqLevel) || { requiredPlayerLevel: 1 };
+
+          if (!itemsMap.has(item.id)) {
+            itemsMap.set(item.id, {
+              ...item,
+              unlocks: []
+            });
+          }
+
+          const existing = itemsMap.get(item.id);
+          // Add this unlock path if unique
+          if (!existing.unlocks.some(u => u.trader.id === trader.id && u.level === reqLevel && (u.task ? u.task.id === offer.taskUnlock?.id : !offer.taskUnlock))) {
+            existing.unlocks.push({
+              trader: { id: trader.id, name: trader.name },
+              level: reqLevel,
+              playerLevel: traderLvlData.requiredPlayerLevel,
+              task: offer.taskUnlock
+            });
+          }
+        });
+      };
+      if (trader.cashOffers) trader.cashOffers.forEach(o => processOffer(o, false));
+      if (trader.barters) trader.barters.forEach(o => processOffer(o, true));
+    });
+
+    blockedItemsData = Array.from(itemsMap.values()).filter(i => i.unlocks.length > 0);
+    // Sort alphabetical
+    blockedItemsData.sort((a, b) => a.name.localeCompare(b.name));
+
+    updateBlockedStats();
+    renderBlockedItems();
+  } catch (e) {
+    console.warn("Error loading blocked:", e);
+  } finally {
+    setDisp('b-loading', 'none');
+  }
+}
+
+function updateBlockedStats() {
+  const total = blockedItemsData.length;
+  let unlocked = 0;
+  blockedItemsData.forEach(i => { if (blockedUnlocked.has(i.id)) unlocked++; });
+
+  if (getEl('b-total')) getEl('b-total').textContent = total;
+  if (getEl('b-unlocked')) getEl('b-unlocked').textContent = unlocked;
+  if (getEl('b-locked')) getEl('b-locked').textContent = total - unlocked;
+
+  const pct = total > 0 ? Math.round((unlocked / total) * 100) : 0;
+  if (getEl('home-blocked-pct')) getEl('home-blocked-pct').textContent = pct + '%';
+  if (getEl('home-blocked-fill')) getEl('home-blocked-fill').style.width = pct + '%';
+  if (getEl('b-count')) getEl('b-count').textContent = total + ' items';
+}
+
+function isItemActuallyUnlocked(item) {
+  if (blockedUnlocked.has(item.id)) return true;
+  for (const u of item.unlocks) {
+    const hasTask = u.task ? questsCompleted.has(u.task.id) : true;
+    const hasLevel = playerLevel >= u.playerLevel;
+    if (hasTask && hasLevel) return true;
+  }
+  return false;
+}
+
+function renderBlockedItems() {
+  const grid = getEl('b-grid');
+  if (!grid) return;
+  const query = blockedSearch.toLowerCase();
+  let html = '';
+  let count = 0;
+
+  blockedItemsData.forEach(item => {
+    if (query && !item.name.toLowerCase().includes(query) && !item.shortName.toLowerCase().includes(query)) return;
+
+    const isUnlocked = isItemActuallyUnlocked(item);
+    const hasManualUnlock = blockedUnlocked.has(item.id);
+
+    // Filtering
+    if (blockedFilter === 'unlocked' && !isUnlocked) return;
+    if (blockedFilter === 'locked' && isUnlocked) return;
+    if (blockedFilter === 'quests' && !item.unlocks.some(u => u.task)) return;
+    if (blockedFilter === 'level' && !item.unlocks.some(u => !u.task)) return;
+
+    count++;
+
+    let reqsHtml = item.unlocks.map(u => {
+      let r = '';
+      if (u.task) r += `<div style="color:var(--yellow); font-size:0.75rem;">${i18n[currentLang].ui_requires_quest.replace('{0}', u.task.name)}</div>`;
+      r += `<div style="color:var(--text2); font-size:0.7rem;">${i18n[currentLang].ui_requires_trader_level.replace('{0}', u.level).replace('{1}', u.trader.name)} (Lvl ${u.playerLevel})</div>`;
+      return `<div style="margin-bottom:4px; padding:4px; background:rgba(255,255,255,0.03); border-radius:4px;">${r}</div>`;
+    }).join('');
+
+    html += `
+      <div class="k-item ${isUnlocked ? 'found' : ''}" style="display:flex; flex-direction:column; justify-content:space-between; cursor:default;">
+        <div style="display:flex; gap:10px;">
+          <img src="${item.iconLink}" style="width:50px; height:50px; background:#000; border-radius:6px; padding:5px; border:1px solid var(--border);" onerror="this.src='images/item_placeholder.webp'">
+          <div style="flex:1">
+            <div style="font-size:0.9rem; font-weight:600; line-height:1.2; margin-bottom:4px;">${item.name}</div>
+            <div style="font-size:0.7rem; color:var(--text2);">${item.shortName}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
+          ${reqsHtml}
+        </div>
+        <button class="btn-mark-built" style="margin-top:10px; width:100%; border-color:${hasManualUnlock ? 'var(--green)' : 'var(--border)'};" 
+          onclick="toggleBlockedItem('${item.id}')">
+          ${hasManualUnlock ? '✓ CONSEGUIDO' : 'MARCAR CONSEGUIDO'}
+        </button>
+      </div>
+    `;
+  });
+
+  if (count === 0) {
+    html = `<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">${i18n[currentLang].ui_none}</div>`;
+  }
+
+  grid.innerHTML = html;
+  if (getEl('b-count')) getEl('b-count').textContent = count + ' items';
+}
+
+function toggleBlockedItem(id) {
+  if (isReadOnly) return;
+  if (blockedUnlocked.has(id)) blockedUnlocked.delete(id);
+  else blockedUnlocked.add(id);
+  saveBlocked();
+  updateBlockedStats();
+  renderBlockedItems();
+}
+
+function searchBlockedItems(val) {
+  blockedSearch = val;
+  renderBlockedItems();
+}
+
+document.querySelectorAll('#page-blocked .filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    blockedFilter = tab.dataset.filter;
+    document.querySelectorAll('#page-blocked .filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    renderBlockedItems();
+  });
+});
+
 // ═══════ INIT ═══════
 async function initApp() {
   // Load local data first
@@ -2626,11 +2849,12 @@ async function initApp() {
   loadHideout_storage();
   loadHideoutInventory_storage();
   loadQuests_storage();
+  loadBlocked_storage();
 
   // Try to restore auth session
   if (authToken) {
     try {
-      const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${authToken} ` } });
       if (res.ok) {
         currentUser = await res.json();
         viewingProfileId = currentUser.id;
