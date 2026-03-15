@@ -76,6 +76,10 @@ async function initDB() {
         db.run(`ALTER TABLE profiles ADD COLUMN blocked_unlocked TEXT DEFAULT '[]'`);
     } catch (e) { }
 
+    try {
+        db.run(`ALTER TABLE profiles ADD COLUMN trader_levels TEXT DEFAULT '{}'`);
+    } catch (e) { }
+
     saveDB();
     console.log('  ✓ Database initialized');
 }
@@ -197,7 +201,7 @@ app.get('/api/profiles', (req, res) => {
     const profiles = getAll(`
     SELECT u.id, u.username, u.created_at,
            p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.quests_active, 
-           p.blocked_unlocked, p.player_level, p.target_quest_id, p.updated_at
+           p.blocked_unlocked, p.player_level, p.target_quest_id, p.trader_levels, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     ORDER BY u.username
@@ -215,7 +219,8 @@ app.get('/api/profiles', (req, res) => {
         quests_active: JSON.parse(p.quests_active || '[]'),
         blocked_unlocked: JSON.parse(p.blocked_unlocked || '[]'),
         player_level: p.player_level || 1,
-        target_quest_id: p.target_quest_id
+        target_quest_id: p.target_quest_id,
+        trader_levels: JSON.parse(p.trader_levels || '{}')
     })));
 });
 
@@ -224,7 +229,7 @@ app.get('/api/profiles/:id', (req, res) => {
     const profile = getRow(`
     SELECT u.id, u.username, u.created_at,
            p.kappa_found, p.hideout_built, p.hideout_inventory, p.quests_completed, p.quests_active, 
-           p.blocked_unlocked, p.player_level, p.target_quest_id, p.updated_at
+           p.blocked_unlocked, p.player_level, p.target_quest_id, p.trader_levels, p.updated_at
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id
     WHERE u.id = ?
@@ -246,14 +251,15 @@ app.get('/api/profiles/:id', (req, res) => {
         quests_active: JSON.parse(profile.quests_active || '[]'),
         blocked_unlocked: JSON.parse(profile.blocked_unlocked || '[]'),
         player_level: profile.player_level || 1,
-        target_quest_id: profile.target_quest_id
+        target_quest_id: profile.target_quest_id,
+        trader_levels: JSON.parse(profile.trader_levels || '{}')
     });
 });
 
 // Update own profile (requires auth)
 app.put('/api/profile', authenticateToken, (req, res) => {
     try {
-        const { kappa_found, hideout_built, hideout_inventory, quests_completed, quests_active, blocked_unlocked, player_level, target_quest_id } = req.body;
+        const { kappa_found, hideout_built, hideout_inventory, quests_completed, quests_active, blocked_unlocked, player_level, target_quest_id, trader_levels } = req.body;
 
         const sets = [];
         const params = [];
@@ -289,6 +295,10 @@ app.put('/api/profile', authenticateToken, (req, res) => {
         if (target_quest_id !== undefined) {
             sets.push('target_quest_id = ?');
             params.push(target_quest_id);
+        }
+        if (trader_levels !== undefined) {
+            sets.push('trader_levels = ?');
+            params.push(JSON.stringify(trader_levels));
         }
 
         if (sets.length === 0) {

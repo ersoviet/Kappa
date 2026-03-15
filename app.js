@@ -81,12 +81,14 @@ let quests = [];
 let questsCompleted = new Set();
 let questsActive = new Set();
 let playerLevel = 1;
+let traderLevels = {};
 let targetQuestId = null;
 
 const TRADER_ORDER = [
   'Prapor', 'Therapist', 'Fence', 'Skier', 'Peacekeeper', 'Mechanic',
   'Ragman', 'Jaeger', 'Ref', 'Lightkeeper', 'BTR Driver'
 ];
+TRADER_ORDER.forEach(t => traderLevels[t.toLowerCase()] = 1);
 let questFilter = 'all';
 let questSearch = '';
 let activeTraderFilter = 'all';
@@ -516,7 +518,8 @@ function saveQuests() {
     completed: [...questsCompleted],
     active: [...questsActive],
     level: playerLevel,
-    target: targetQuestId
+    target: targetQuestId,
+    traderLevels: traderLevels
   }));
   syncProfileToServer();
 }
@@ -532,6 +535,11 @@ function loadQuests_storage() {
         questsActive = new Set(data.active || []);
         playerLevel = data.level || 1;
         targetQuestId = data.target || null;
+        if (data.traderLevels) {
+          traderLevels = data.traderLevels;
+        } else {
+          TRADER_ORDER.forEach(t => traderLevels[t.toLowerCase()] = 1);
+        }
       }
     }
   } catch { }
@@ -567,7 +575,8 @@ function syncProfileToServer() {
           quests_active: [...questsActive],
           blocked_unlocked: [...blockedUnlocked],
           player_level: playerLevel,
-          target_quest_id: targetQuestId
+          target_quest_id: targetQuestId,
+          trader_levels: traderLevels
         })
       });
     } catch (e) {
@@ -780,6 +789,8 @@ async function loadProfileFromServer(profileId) {
     blockedUnlocked = new Set(profile.blocked_unlocked || []);
     playerLevel = profile.player_level || 1;
     targetQuestId = profile.target_quest_id || null;
+    traderLevels = profile.trader_levels || {};
+    TRADER_ORDER.forEach(t => { if (!traderLevels[t.toLowerCase()]) traderLevels[t.toLowerCase()] = 1; });
     // Also update localStorage
     localStorage.setItem(KAPPA_STORAGE, JSON.stringify([...kappaFound]));
     localStorage.setItem(HIDEOUT_STORAGE, JSON.stringify([...hideoutBuilt]));
@@ -788,7 +799,8 @@ async function loadProfileFromServer(profileId) {
       completed: [...questsCompleted],
       active: [...questsActive],
       level: playerLevel,
-      target: targetQuestId
+      target: targetQuestId,
+      traderLevels: traderLevels
     }));
     localStorage.setItem(BLOCKED_STORAGE, JSON.stringify([...blockedUnlocked]));
 
@@ -2758,7 +2770,9 @@ function isItemActuallyUnlocked(item) {
   for (const u of item.unlocks) {
     const hasTask = u.task ? questsCompleted.has(u.task.id) : true;
     const hasLevel = playerLevel >= u.playerLevel;
-    if (hasTask && hasLevel) return true;
+    const traderKey = u.trader.name.toLowerCase();
+    const hasTraderLvl = (traderLevels[traderKey] || 1) >= u.level;
+    if (hasTask && hasLevel && hasTraderLvl) return true;
   }
   return false;
 }
@@ -2803,7 +2817,7 @@ function renderBlockedItems() {
         <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
           ${reqsHtml}
         </div>
-        <button class="btn-mark-built" style="margin-top:10px; width:100%; border-color:${hasManualUnlock ? 'var(--green)' : 'var(--border)'};" 
+        <button class="btn-mark-built" style="margin-top:10px; width:100%; background:${hasManualUnlock ? 'var(--green)' : 'transparent'}; color:${hasManualUnlock ? '#000' : 'var(--text)'}; border-color:${hasManualUnlock ? 'var(--green)' : 'var(--border)'};" 
           onclick="toggleBlockedItem('${item.id}')">
           ${hasManualUnlock ? '✓ CONSEGUIDO' : 'MARCAR CONSEGUIDO'}
         </button>
@@ -2841,6 +2855,47 @@ document.querySelectorAll('#page-blocked .filter-tab').forEach(tab => {
     renderBlockedItems();
   });
 });
+
+function renderTraderLevelInputs() {
+  const container = getEl('blocked-trader-levels');
+  if (!container) return;
+  const traders = ['Prapor', 'Therapist', 'Skier', 'Peacekeeper', 'Mechanic', 'Ragman', 'Jaeger', 'Ref'];
+  let html = '';
+  traders.forEach(t => {
+    const key = t.toLowerCase();
+    const val = traderLevels[key] || 1;
+    html += `
+      <div style="background:var(--bgcard); border:1px solid var(--border); padding:5px 8px; border-radius:6px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:0.75rem; color:var(--text3); font-weight:600;">${t.substring(0,3).toUpperCase()}</span>
+        <select onchange="updateTraderLevel('${key}', this.value)" style="background:transparent; border:none; color:var(--text); font-size:0.85rem; outline:none; cursor:pointer;">
+          <option value="1" ${val==1?'selected':''}>1</option>
+          <option value="2" ${val==2?'selected':''}>2</option>
+          <option value="3" ${val==3?'selected':''}>3</option>
+          <option value="4" ${val==4?'selected':''}>4</option>
+        </select>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+  
+  const pLvl = getEl('blocked-player-level');
+  if (pLvl) {
+    pLvl.value = playerLevel;
+    pLvl.onchange = (e) => {
+      playerLevel = parseInt(e.target.value) || 1;
+      saveQuests();
+      renderBlockedItems();
+      renderQuests();
+      renderQuestTarget();
+    };
+  }
+}
+
+function updateTraderLevel(trader, level) {
+  traderLevels[trader] = parseInt(level) || 1;
+  saveQuests();
+  renderBlockedItems();
+}
 
 // ═══════ INIT ═══════
 async function initApp() {
@@ -2884,6 +2939,7 @@ async function initApp() {
 
   const lvlInput = getEl('player-level-input');
   if (lvlInput) lvlInput.value = playerLevel;
+  renderTraderLevelInputs();
   renderQuestTarget();
 }
 

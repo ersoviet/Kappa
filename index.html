@@ -4013,6 +4013,26 @@
                 </div>
             </div>
 
+            <!-- Nuevo bloque de niveles -->
+            <div class="levels-config" style="background:var(--bgcard); border:1px solid var(--border); border-radius:12px; padding:15px; margin-bottom:1.5rem;">
+                <div style="font-family:'Rajdhani', sans-serif; font-weight:600; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:1.2rem;">⭐</span> Nivel y Comerciantes
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text2); margin-bottom:5px; text-transform:uppercase;">Nivel Player</div>
+                        <input type="number" id="blocked-player-level" min="1" max="80" value="1" style="width:60px; background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:8px; font-family:'Rajdhani', sans-serif; font-size:1.1rem; text-align:center;">
+                    </div>
+                    
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text2); margin-bottom:5px; text-transform:uppercase;">Traiders</div>
+                        <div id="blocked-trader-levels" style="display:flex; flex-wrap:wrap; gap:10px;">
+                            <!-- Dynamically generated in app.js -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="toolbar">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
