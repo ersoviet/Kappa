@@ -281,8 +281,8 @@ const i18n = {
     ui_loading_kappa: "Loading Kappa...", ui_loading_hideout: "Loading Hideout...", ui_loading_quests: "Loading Quests...",
     stat_total_blocked: "Total Blocked", stat_unlocked: "Unlocked", stat_locked: "Locked",
     ui_search_blocked: "Search blocked item...", ui_blocked_items_title: "Extraction List",
-    ui_loading_blocked: "Loading blocked items...", nav_blocked: "BLOCKED",
-    home_blocked_title: "BLOCKED", home_blocked_desc: "Items and gear locked behind quests or levels.",
+    ui_loading_blocked: "Loading blocked items...", nav_blocked: "BLOCKADES",
+    home_blocked_title: "BLOCKADES", home_blocked_desc: "Items and gear locked behind quests or levels.",
     home_stats_unlocked: "UNLOCKED", ui_unlocked_by: "Unlocked by: ",
     ui_requires_trader_level: "Requires level {0} for {1}", ui_requires_quest: "Requires quest: {0}",
     ui_retry: "Retry", ui_stations: "Stations", ui_items_list: "Items List",
@@ -980,7 +980,7 @@ function navigate(page) {
     const hFill = getEl('header-prog-fill'); if (hFill) { hFill.className = 'prog-bar-fill valuation'; hFill.style.background = '#a855f7'; hFill.style.width = '100%'; }
   } else if (page === 'blocked') {
     const pBlocked = getEl('page-blocked'); if (pBlocked) pBlocked.classList.add('active');
-    const nBlocked = getEl('nav-blocked'); if (nBlocked) nBlocked.className = 'nav-tab active';
+    const nBlocked = getEl('nav-blocked'); if (nBlocked) nBlocked.className = 'nav-tab active-blocked';
     const hVal = getEl('header-prog-val'); if (hVal) hVal.className = 'red';
     const hFill = getEl('header-prog-fill'); if (hFill) hFill.className = 'prog-bar-fill red';
     if (!blockedItemsData.length) loadBlockedItemsData(); else { updateBlockedStats(); renderBlockedItems(); }
