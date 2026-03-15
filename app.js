@@ -2668,11 +2668,15 @@ function formatRoubles(val) {
 document.addEventListener('DOMContentLoaded', () => {
   const lvlInput = getEl('player-level-input');
   if (lvlInput) {
-    lvlInput.addEventListener('change', (e) => {
+    lvlInput.addEventListener('input', (e) => {
       playerLevel = parseInt(e.target.value) || 1;
+      const bLvlInput = getEl('blocked-player-level');
+      if (bLvlInput) bLvlInput.value = playerLevel;
       saveQuests();
       renderQuests();
       renderQuestTarget();
+      renderBlockedItems();
+      updateBlockedStats();
     });
   }
 });
@@ -2753,7 +2757,7 @@ async function loadBlockedItemsData() {
 function updateBlockedStats() {
   const total = blockedItemsData.length;
   let unlocked = 0;
-  blockedItemsData.forEach(i => { if (blockedUnlocked.has(i.id)) unlocked++; });
+  blockedItemsData.forEach(i => { if (isItemActuallyUnlocked(i)) unlocked++; });
 
   if (getEl('b-total')) getEl('b-total').textContent = total;
   if (getEl('b-unlocked')) getEl('b-unlocked').textContent = unlocked;
@@ -2800,9 +2804,24 @@ function renderBlockedItems() {
 
     let reqsHtml = item.unlocks.map(u => {
       let r = '';
-      if (u.task) r += `<div style="color:var(--yellow); font-size:0.75rem;">${i18n[currentLang].ui_requires_quest.replace('{0}', u.task.name)}</div>`;
-      r += `<div style="color:var(--text2); font-size:0.7rem;">${i18n[currentLang].ui_requires_trader_level.replace('{0}', u.level).replace('{1}', u.trader.name)} (Lvl ${u.playerLevel})</div>`;
-      return `<div style="margin-bottom:4px; padding:4px; background:rgba(255,255,255,0.03); border-radius:4px;">${r}</div>`;
+      const hasTask = u.task ? questsCompleted.has(u.task.id) : true;
+      const hasLevel = playerLevel >= u.playerLevel;
+      const traderKey = u.trader.name.toLowerCase();
+      const hasTraderLvl = (traderLevels[traderKey] || 1) >= u.level;
+      
+      if (u.task) {
+        r += `<div style="color:${hasTask ? 'var(--green)' : 'var(--red)'}; font-size:0.75rem;">
+                ${hasTask ? '✅' : '❌'} ${i18n[currentLang].ui_requires_quest.replace('{0}', u.task.name)}
+              </div>`;
+      }
+      r += `<div style="color:${hasTraderLvl ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
+              ${hasTraderLvl ? '✅' : '❌'} ${i18n[currentLang].ui_requires_trader_level.replace('{0}', u.level).replace('{1}', u.trader.name)}
+            </div>`;
+      r += `<div style="color:${hasLevel ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
+              ${hasLevel ? '✅' : '❌'} Jugador Lvl ${u.playerLevel}
+            </div>`;
+            
+      return `<div style="margin-bottom:4px; padding:4px; background:rgba(255,255,255,0.03); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${r}</div>`;
     }).join('');
 
     html += `
@@ -2817,9 +2836,9 @@ function renderBlockedItems() {
         <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
           ${reqsHtml}
         </div>
-        <button class="btn-mark-built" style="margin-top:10px; width:100%; background:${hasManualUnlock ? 'var(--green)' : 'transparent'}; color:${hasManualUnlock ? '#000' : 'var(--text)'}; border-color:${hasManualUnlock ? 'var(--green)' : 'var(--border)'};" 
+        <button class="btn-mark-built" style="margin-top:10px; width:100%; font-weight:700; background:${isUnlocked ? 'var(--green)' : 'transparent'}; color:${isUnlocked ? '#000' : 'var(--text)'}; border-color:${isUnlocked ? 'var(--green)' : 'var(--border)'};" 
           onclick="toggleBlockedItem('${item.id}')">
-          ${hasManualUnlock ? '✓ CONSEGUIDO' : 'MARCAR CONSEGUIDO'}
+          ${isUnlocked && !hasManualUnlock ? '✓ DESBLOQUEADO (REQUISITOS)' : (hasManualUnlock ? '✓ CONSEGUIDO (MANUAL)' : 'MARCAR CONSEGUIDO')}
         </button>
       </div>
     `;
@@ -2881,10 +2900,13 @@ function renderTraderLevelInputs() {
   const pLvl = getEl('blocked-player-level');
   if (pLvl) {
     pLvl.value = playerLevel;
-    pLvl.onchange = (e) => {
+    pLvl.oninput = (e) => {
       playerLevel = parseInt(e.target.value) || 1;
+      const qLvlInput = getEl('player-level-input');
+      if (qLvlInput) qLvlInput.value = playerLevel;
       saveQuests();
       renderBlockedItems();
+      updateBlockedStats();
       renderQuests();
       renderQuestTarget();
     };
@@ -2895,6 +2917,7 @@ function updateTraderLevel(trader, level) {
   traderLevels[trader] = parseInt(level) || 1;
   saveQuests();
   renderBlockedItems();
+  updateBlockedStats();
 }
 
 // ═══════ INIT ═══════
