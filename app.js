@@ -118,6 +118,42 @@ let isReadOnly = false; // true when viewing another user's profile
 // ═══════ I18N SYSTEM ═══════
 let currentLang = localStorage.getItem('eft_tracker_lang') || 'es';
 
+const categoryTranslations = {
+  "Assault rifle": "Fusil de asalto",
+  "Assault carbine": "Carabina de asalto",
+  "Light machine gun": "Ametralladora ligera",
+  "Submachine gun": "Subfusil",
+  "Shotgun": "Escopeta",
+  "Marksman rifle": "Fusil de tirador",
+  "Sniper rifle": "Francotirador",
+  "Pistol": "Pistola",
+  "Melee weapon": "Arma cuerpo a cuerpo",
+  "Grenade": "Granada",
+  "Ammo": "Munición",
+  "Ammo box": "Caja de munición",
+  "Magazine": "Cargador",
+  "Weapon parts & mods": "Partes y mods de armas",
+  "Tactical rig": "Chaleco táctico",
+  "Armor vest": "Chaleco antibalas",
+  "Backpack": "Mochila",
+  "Headwear": "Casco",
+  "Headphones": "Auriculares",
+  "Facecover": "Máscara",
+  "Armband": "Brazalete",
+  "Eyewear": "Gafas",
+  "Visor": "Visera",
+  "Meds": "Medicinas",
+  "Provisions": "Provisiones",
+  "Barter item": "Materiales / Intercambio",
+  "Keys": "Llaves",
+  "Info": "Información",
+  "Container": "Contenedor",
+  "Map": "Mapa",
+  "Currency": "Dinero",
+  "Repair kits": "Kits de reparación",
+  "Special equipment": "Equipamiento especial"
+};
+
 const i18n = {
   es: {
     nav_kappa: "KAPPA", nav_hideout: "REFUGIO", nav_quests: "MISIONES", nav_prices: "PRECIOS",
