@@ -104,7 +104,7 @@ let currentModalItem = null;
 // Blocked state
 let blockedItemsData = [];
 let blockedSearch = '';
-let blockedFilter = 'all'; // 'all', 'unlocked', 'locked', 'quests', 'level'
+let blockedFilter = 'locked'; // 'all', 'unlocked', 'locked', 'quests', 'level'
 const BLOCKED_STORAGE = 'blocked_tracker_v1';
 let blockedUnlocked = new Set();
 
@@ -2810,8 +2810,13 @@ function renderBlockedItems() {
       const hasTraderLvl = (traderLevels[traderKey] || 1) >= u.level;
       
       if (u.task) {
+        let wikiUrl = `https://escapefromtarkov.fandom.com/wiki/${encodeURIComponent(u.task.name.replace(/ /g, '_'))}`;
+        const questObj = quests.find(q => q.id === u.task.id);
+        if (questObj && questObj.wikiLink) wikiUrl = questObj.wikiLink;
+        
+        const taskLinkHtml = `<a href="${wikiUrl}" target="_blank" style="color:inherit; text-decoration:underline; font-weight:600;" onclick="event.stopPropagation()">${u.task.name}</a>`;
         r += `<div style="color:${hasTask ? 'var(--green)' : 'var(--red)'}; font-size:0.75rem;">
-                ${hasTask ? '✅' : '❌'} ${i18n[currentLang].ui_requires_quest.replace('{0}', u.task.name)}
+                ${hasTask ? '✅' : '❌'} ${i18n[currentLang].ui_requires_quest.replace('{0}', taskLinkHtml)}
               </div>`;
       }
       r += `<div style="color:${hasTraderLvl ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
