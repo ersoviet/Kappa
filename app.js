@@ -2691,12 +2691,12 @@ const BLOCKED_QUERY = `query GetBlocked($lang: LanguageCode, $gameMode: GameMode
     cashOffers {
       minTraderLevel
       taskUnlock { id name }
-      item { id name shortName iconLink basePrice }
+      item { id name shortName iconLink basePrice category { name } }
     }
     barters {
       level
       taskUnlock { id name }
-      rewardItems { item { id name shortName iconLink basePrice } }
+      rewardItems { item { id name shortName iconLink basePrice category { name } } }
     }
   }
 }`;
@@ -2705,7 +2705,7 @@ async function loadBlockedItemsData() {
   setDisp('b-loading', 'flex');
   getEl('b-grid').innerHTML = '';
   try {
-    const data = await fetchWithCache(BLOCKED_QUERY, 'eft_cache_blocked_v1', { lang: currentLang, gameMode });
+    const data = await fetchWithCache(BLOCKED_QUERY, 'eft_cache_blocked_v2', { lang: currentLang, gameMode });
     const itemsMap = new Map();
 
     data.traders.forEach(trader => {
@@ -2785,8 +2785,9 @@ function renderBlockedItems() {
   const grid = getEl('b-grid');
   if (!grid) return;
   const query = blockedSearch.toLowerCase();
-  let html = '';
   let count = 0;
+
+  let renderItems = [];
 
   blockedItemsData.forEach(item => {
     if (query && !item.name.toLowerCase().includes(query) && !item.shortName.toLowerCase().includes(query)) return;
@@ -2800,58 +2801,88 @@ function renderBlockedItems() {
     if (blockedFilter === 'quests' && !item.unlocks.some(u => u.task)) return;
     if (blockedFilter === 'level' && !item.unlocks.some(u => !u.task)) return;
 
-    count++;
-
-    let reqsHtml = item.unlocks.map(u => {
-      let r = '';
-      const hasTask = u.task ? questsCompleted.has(u.task.id) : true;
-      const hasLevel = playerLevel >= u.playerLevel;
-      const traderKey = u.trader.name.toLowerCase();
-      const hasTraderLvl = (traderLevels[traderKey] || 1) >= u.level;
-      
-      if (u.task) {
-        let wikiUrl = `https://escapefromtarkov.fandom.com/wiki/${encodeURIComponent(u.task.name.replace(/ /g, '_'))}`;
-        const questObj = quests.find(q => q.id === u.task.id);
-        if (questObj && questObj.wikiLink) wikiUrl = questObj.wikiLink;
-        
-        const taskLinkHtml = `<a href="${wikiUrl}" target="_blank" style="color:inherit; text-decoration:underline; font-weight:600;" onclick="event.stopPropagation()">${u.task.name}</a>`;
-        r += `<div style="color:${hasTask ? 'var(--green)' : 'var(--red)'}; font-size:0.75rem;">
-                ${hasTask ? '✅' : '❌'} ${i18n[currentLang].ui_requires_quest.replace('{0}', taskLinkHtml)}
-              </div>`;
-      }
-      r += `<div style="color:${hasTraderLvl ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
-              ${hasTraderLvl ? '✅' : '❌'} ${i18n[currentLang].ui_requires_trader_level.replace('{0}', u.level).replace('{1}', u.trader.name)}
-            </div>`;
-      r += `<div style="color:${hasLevel ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
-              ${hasLevel ? '✅' : '❌'} Jugador Lvl ${u.playerLevel}
-            </div>`;
-            
-      return `<div style="margin-bottom:4px; padding:4px; background:rgba(255,255,255,0.03); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${r}</div>`;
-    }).join('');
-
-    html += `
-      <div class="k-item ${isUnlocked ? 'found' : ''}" style="display:flex; flex-direction:column; justify-content:space-between; cursor:default;">
-        <div style="display:flex; gap:10px;">
-          <img src="${item.iconLink}" style="width:50px; height:50px; background:#000; border-radius:6px; padding:5px; border:1px solid var(--border);" onerror="this.src='images/item_placeholder.webp'">
-          <div style="flex:1">
-            <div style="font-size:0.9rem; font-weight:600; line-height:1.2; margin-bottom:4px;">${item.name}</div>
-            <div style="font-size:0.7rem; color:var(--text2);">${item.shortName}</div>
-          </div>
-        </div>
-        <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
-          ${reqsHtml}
-        </div>
-        <button class="btn-mark-built" style="margin-top:10px; width:100%; font-weight:700; background:${isUnlocked ? 'var(--green)' : 'transparent'}; color:${isUnlocked ? '#000' : 'var(--text)'}; border-color:${isUnlocked ? 'var(--green)' : 'var(--border)'};" 
-          onclick="toggleBlockedItem('${item.id}')">
-          ${isUnlocked && !hasManualUnlock ? '✓ DESBLOQUEADO (REQUISITOS)' : (hasManualUnlock ? '✓ CONSEGUIDO (MANUAL)' : 'MARCAR CONSEGUIDO')}
-        </button>
-      </div>
-    `;
+    renderItems.push({ item, isUnlocked, hasManualUnlock });
   });
 
-  if (count === 0) {
-    html = `<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">${i18n[currentLang].ui_none}</div>`;
+  if (renderItems.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:2rem; color:var(--text3);">${i18n[currentLang].ui_none}</div>`;
+    if (getEl('b-count')) getEl('b-count').textContent = '0 items';
+    return;
   }
+
+  // Group by Category
+  const grouped = {};
+  renderItems.forEach(({ item, isUnlocked, hasManualUnlock }) => {
+    count++;
+    const catName = (item.category && item.category.name) ? item.category.name : 'Otros';
+    if (!grouped[catName]) grouped[catName] = [];
+    grouped[catName].push({ item, isUnlocked, hasManualUnlock });
+  });
+
+  // Convert to array and sort by category
+  const catEntries = Object.entries(grouped);
+  catEntries.sort((a, b) => a[0].localeCompare(b[0]));
+
+  let html = '';
+
+  catEntries.forEach(([catName, itemsInCat]) => {
+    // Header for Category
+    html += `
+      <div style="grid-column: 1/-1; margin-top:20px; border-bottom:1px solid var(--border); padding-bottom:5px;">
+        <h3 style="color:var(--gold); font-family:'Rajdhani'; letter-spacing:1px; text-transform:uppercase; font-size:1.2rem;">
+          ${categoryTranslations[catName] || catName} <span style="font-size:0.8rem; color:var(--text3); margin-left:10px;">(${itemsInCat.length})</span>
+        </h3>
+      </div>
+    `;
+
+    itemsInCat.forEach(({ item, isUnlocked, hasManualUnlock }) => {
+      let reqsHtml = item.unlocks.map(u => {
+        let r = '';
+        const hasTask = u.task ? questsCompleted.has(u.task.id) : true;
+        const hasLevel = playerLevel >= u.playerLevel;
+        const traderKey = u.trader.name.toLowerCase();
+        const hasTraderLvl = (traderLevels[traderKey] || 1) >= u.level;
+        
+        if (u.task) {
+          let wikiUrl = `https://escapefromtarkov.fandom.com/wiki/${encodeURIComponent(u.task.name.replace(/ /g, '_'))}`;
+          const questObj = quests.find(q => q.id === u.task.id);
+          if (questObj && questObj.wikiLink) wikiUrl = questObj.wikiLink;
+          
+          const taskLinkHtml = `<a href="${wikiUrl}" target="_blank" style="color:inherit; text-decoration:underline; font-weight:600;" onclick="event.stopPropagation()">${u.task.name}</a>`;
+          r += `<div style="color:${hasTask ? 'var(--green)' : 'var(--red)'}; font-size:0.75rem;">
+                  ${hasTask ? '✅' : '❌'} ${i18n[currentLang].ui_requires_quest.replace('{0}', taskLinkHtml)}
+                </div>`;
+        }
+        r += `<div style="color:${hasTraderLvl ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
+                ${hasTraderLvl ? '✅' : '❌'} ${i18n[currentLang].ui_requires_trader_level.replace('{0}', u.level).replace('{1}', u.trader.name)}
+              </div>`;
+        r += `<div style="color:${hasLevel ? 'var(--green)' : 'var(--red)'}; font-size:0.7rem;">
+                ${hasLevel ? '✅' : '❌'} Jugador Lvl ${u.playerLevel}
+              </div>`;
+              
+        return `<div style="margin-bottom:4px; padding:4px; background:rgba(255,255,255,0.03); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${r}</div>`;
+      }).join('');
+
+      html += `
+        <div class="k-item ${isUnlocked ? 'found' : ''}" style="display:flex; flex-direction:column; justify-content:space-between; cursor:default;">
+          <div style="display:flex; gap:10px;">
+            <img src="${item.iconLink}" style="width:50px; height:50px; background:#000; border-radius:6px; padding:5px; border:1px solid var(--border);" onerror="this.src='images/item_placeholder.webp'">
+            <div style="flex:1">
+              <div style="font-size:0.9rem; font-weight:600; line-height:1.2; margin-bottom:4px;">${item.name}</div>
+              <div style="font-size:0.7rem; color:var(--text2);">${item.shortName}</div>
+            </div>
+          </div>
+          <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
+            ${reqsHtml}
+          </div>
+          <button class="btn-mark-built" style="margin-top:10px; width:100%; font-weight:700; background:${isUnlocked ? 'var(--green)' : 'transparent'}; color:${isUnlocked ? '#000' : 'var(--text)'}; border-color:${isUnlocked ? 'var(--green)' : 'var(--border)'};" 
+            onclick="toggleBlockedItem('${item.id}')">
+            ${isUnlocked && !hasManualUnlock ? '✓ DESBLOQUEADO (REQUISITOS)' : (hasManualUnlock ? '✓ CONSEGUIDO (MANUAL)' : 'MARCAR CONSEGUIDO')}
+          </button>
+        </div>
+      `;
+    });
+  });
 
   grid.innerHTML = html;
   if (getEl('b-count')) getEl('b-count').textContent = count + ' items';
