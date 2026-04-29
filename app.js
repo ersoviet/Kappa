@@ -430,6 +430,59 @@ function changeLanguage(lang) {
   else if (currentPage === 'valuation' && selectedValuationItem) { closeValuationDetail(); }
 }
 
+function startOCR() {
+  toast('Iniciando OCR...', 't-founded');
+}
+
+// ═══════ LOG IMPORTER (RECONOCIMIENTO) ═══════
+function handleLogUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  toast('Leyendo archivo Log...', 't-found');
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const text = e.target.result;
+    console.log("=== ANÁLISIS DE EFT LOG ===");
+    console.log("Tamaño del archivo:", text.length, "bytes");
+
+    // Intentar buscar estructuras JSON relacionadas con Quests o Profiles
+    let questLinesFound = 0;
+    const lines = text.split('\n');
+    
+    for(let i=0; i<lines.length; i++) {
+        const line = lines[i];
+        
+        // Buscamos patrones típicos de BSG Network Responses en los Logs
+        if (line.includes('"quests":') || line.includes('"qid":') || line.includes('"status": "Success"') || line.includes('"status": 4')) {
+            console.log(`Línea [${i}] contiene datos de misiones:`, line.substring(0, 300) + (line.length > 300 ? "..." : ""));
+            questLinesFound++;
+            if (questLinesFound > 15) {
+                console.log("Se encontraron demasiadas líneas, deteniendo la recolección tras 15 resultados...");
+                break;
+            }
+        }
+    }
+    
+    if (questLinesFound === 0) {
+        console.warn("No se encontraron rastros de misiones en este archivo.");
+        alert("En este Log no parece haber información de tu perfil. Recuerda que debes entrar al juego y abrir la pestaña de 'Tasks' para que el juego descargue la lista y la escriba en el archivo.");
+    } else {
+        alert("¡Log leído! Abre la Consola de Desarrollador (F12) en tu navegador y verás lo que el programa ha encontrado. Pásale ese resultado a la IA para programar el importador definitivo.");
+    }
+    
+    // Reset input
+    event.target.value = '';
+  };
+  
+  reader.onerror = function() {
+    toast('Error al leer el archivo', 't-unfound');
+  };
+  
+  reader.readAsText(file);
+}
+
 function switchGameMode(mode) {
   gameMode = mode;
   localStorage.setItem('eft_game_mode', mode);

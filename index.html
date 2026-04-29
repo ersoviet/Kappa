@@ -3651,6 +3651,8 @@
                 </div>
                 <button class="btn btn-ghost" id="btn-reload" data-i18n-title="ui_reload_data"
                     title="Recargar datos">↻</button>
+                <button class="btn btn-ghost" id="btn-upload-log" title="Importar Log" onclick="document.getElementById('log-file-input').click()">📄</button>
+                <input type="file" id="log-file-input" accept=".log" style="display:none" onchange="handleLogUpload(event)" />
                 <button class="btn btn-ghost" id="btn-reset" data-i18n-title="ui_reset_progress"
                     title="Resetear progreso">☐</button>
             </div>
