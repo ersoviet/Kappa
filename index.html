@@ -3945,6 +3945,12 @@
                 </div>
                 <!-- Flowchart Container -->
                 <div id="q-flow-container" class="q-flow-container" style="display:none">
+                    <div style="display:flex; justify-content:center; align-items:center; gap: 10px; margin-bottom: 20px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px; padding: 8px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; transition: all var(--tr);">
+                            <input type="checkbox" id="chk-hide-completed-kappa" onchange="toggleHideCompletedKappa()" style="width:16px; height:16px; accent-color:var(--yellow); cursor:pointer;" />
+                            <span style="font-family:'Rajdhani', sans-serif; font-size:1.1rem; color:var(--text); font-weight:600; letter-spacing:1px;" data-i18n="ui_hide_completed">Ocultar misiones completadas</span>
+                        </label>
+                    </div>
                     <div id="q-flow-tree" class="q-flow-tree"></div>
                 </div>
             </div>

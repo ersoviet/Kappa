@@ -93,6 +93,7 @@ let questFilter = 'all';
 let questSearch = '';
 let activeTraderFilter = 'all';
 let selectedQuest = null;
+let hideCompletedKappa = false;
 
 // Valuation state
 let valuationSearchResults = [];
@@ -178,6 +179,7 @@ const i18n = {
     ui_level: "NIVEL", ui_requirements: "Requisitos previos", ui_objectives: "Objetivos", ui_rewards: "Recompensas",
     ui_none: "Ninguno", ui_no_results: "No se encontraron misiones",
     ui_mark_pending: "Marcar como pendiente", ui_mark_complete: "Marcar como completada", ui_mark_active: "Marcar Activa",
+    ui_hide_completed: "Ocultar misiones completadas",
     ui_set_goal: "Fijar como objetivo", ui_back_search: "Volver a la búsqueda",
     ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Precio por Slot", ui_best_trader: "Mejor Comerciante",
     ui_direct_sell: "Precio de venta directo", ui_add_info: "Información Adicional", ui_base_price: "BASE PRICE",
@@ -305,6 +307,7 @@ const i18n = {
     ui_level: "LEVEL", ui_requirements: "Requirements", ui_objectives: "Objectives", ui_rewards: "Rewards",
     ui_none: "None", ui_no_results: "No missions found",
     ui_mark_pending: "Mark as pending", ui_mark_complete: "Mark as completed", ui_mark_active: "Mark Active",
+    ui_hide_completed: "Hide completed quests",
     ui_set_goal: "Set as goal", ui_back_search: "Back to search",
     ui_flea_market: "Flea Market (Avg 24h)", ui_per_slot: "Price per Slot", ui_best_trader: "Best Trader",
     ui_direct_sell: "Direct sell price", ui_add_info: "Additional Information", ui_base_price: "BASE PRICE",
@@ -2368,10 +2371,25 @@ function renderKappaFlowchart() {
     tierGroups[tier].push(questMap.get(qId));
   });
 
+  // Filter completed quests if toggle is active, and remove empty tiers
+  const filteredTiers = tierGroups.map(group => {
+    return group.filter(q => !(hideCompletedKappa && questsCompleted.has(q.id)));
+  }).filter(group => group && group.length > 0);
+
   // Render
-  container.innerHTML = tierGroups.map((group, tIdx) => `
+  container.innerHTML = filteredTiers.map((group, tIdx) => `
     <div class="flow-level" data-tier="${tIdx}">
-      ${group.sort((a, b) => (a.trader?.name || '').localeCompare(b.trader?.name || '')).map(q => {
+      ${group.sort((a, b) => {
+        const aAvail = isQuestAvailable(a) ? -1 : 1;
+        const bAvail = isQuestAvailable(b) ? -1 : 1;
+        if (aAvail !== bAvail) return aAvail - bAvail;
+        
+        if ((a.minPlayerLevel || 0) !== (b.minPlayerLevel || 0)) {
+            return (a.minPlayerLevel || 0) - (b.minPlayerLevel || 0);
+        }
+        
+        return (a.trader?.name || '').localeCompare(b.trader?.name || '');
+      }).map(q => {
     const isComp = questsCompleted.has(q.id);
     const isAvail = isQuestAvailable(q);
     const isActive = questsActive.has(q.id);
@@ -2390,6 +2408,14 @@ function renderKappaFlowchart() {
   }).join('')}
     </div>
   `).join('<div style="height: 30px; border-left: 2px dashed var(--border); margin: -10px 0;"></div>');
+}
+
+function toggleHideCompletedKappa() {
+  const chk = document.getElementById('chk-hide-completed-kappa');
+  if (chk) {
+    hideCompletedKappa = chk.checked;
+    renderKappaFlowchart();
+  }
 }
 
 function toggleQuest(id) {
