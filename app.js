@@ -2371,9 +2371,17 @@ function renderKappaFlowchart() {
     tierGroups[tier].push(questMap.get(qId));
   });
 
+  // Sync visual checkbox state with variable
+  const chk = document.getElementById('chk-hide-completed-kappa');
+  if (chk) chk.checked = hideCompletedKappa;
+
   // Filter completed quests if toggle is active, and remove empty tiers
   const filteredTiers = tierGroups.map(group => {
-    return group.filter(q => !(hideCompletedKappa && questsCompleted.has(q.id)));
+    if (!group) return [];
+    return group.filter(q => {
+      if (!hideCompletedKappa) return true;
+      return !questsCompleted.has(q.id);
+    });
   }).filter(group => group && group.length > 0);
 
   // Render
