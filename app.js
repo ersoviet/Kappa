@@ -445,34 +445,40 @@ function handleLogUpload(event) {
   reader.onload = function(e) {
     const text = e.target.result;
     console.log("=== ANÁLISIS DE EFT LOG ===");
+    console.log("Nombre del archivo subido:", file.name);
     console.log("Tamaño del archivo:", text.length, "bytes");
 
-    // Intentar buscar estructuras JSON relacionadas con Quests o Profiles
     let questLinesFound = 0;
     const lines = text.split('\n');
+    console.log("- Primeras línas del log para comprobar formato:");
+    for(let i=0; i<Math.min(5, lines.length); i++) console.log(lines[i]);
     
     for(let i=0; i<lines.length; i++) {
         const line = lines[i];
+        const lowerLine = line.toLowerCase();
         
-        // Buscamos patrones típicos de BSG Network Responses en los Logs
-        if (line.includes('"quests":') || line.includes('"qid":') || line.includes('"status": "Success"') || line.includes('"status": 4')) {
-            console.log(`Línea [${i}] contiene datos de misiones:`, line.substring(0, 300) + (line.length > 300 ? "..." : ""));
+        // Buscamos rutas de endpoints HTTP o fragmentos grandes de JSON (las respuestas del servidor)
+        if (lowerLine.includes('/client/quest/list') || lowerLine.includes('/client/game/profile/list') || lowerLine.includes('profile/status') || 
+           (lowerLine.includes('quest') && line.length > 150 && line.includes('{')) ||
+           (line.length > 1000 && line.includes('{') && line.includes('status'))) {
+            
+            console.log(`Posible hallazgo en línea [${i}]:\n`, line.substring(0, 500) + (line.length > 500 ? "... [truncado]" : ""));
             questLinesFound++;
+            
             if (questLinesFound > 15) {
-                console.log("Se encontraron demasiadas líneas, deteniendo la recolección tras 15 resultados...");
+                console.log("Se encontraron al menos 15 coincidencias, deteniendo escaneo...");
                 break;
             }
         }
     }
     
     if (questLinesFound === 0) {
-        console.warn("No se encontraron rastros de misiones en este archivo.");
-        alert("En este Log no parece haber información de tu perfil. Recuerda que debes entrar al juego y abrir la pestaña de 'Tasks' para que el juego descargue la lista y la escriba en el archivo.");
+        console.warn("No detectamos el patrón esperado en este archivo.");
+        alert("Ese archivo no contiene la información. ¿Qué archivo estás subiendo? Mírame en la consola (F12) o envíame su nombre.");
     } else {
-        alert("¡Log leído! Abre la Consola de Desarrollador (F12) en tu navegador y verás lo que el programa ha encontrado. Pásale ese resultado a la IA para programar el importador definitivo.");
+        alert("¡Log analizado! Mira en la Consola (F12) para ver qué encontró el programa.");
     }
     
-    // Reset input
     event.target.value = '';
   };
   
