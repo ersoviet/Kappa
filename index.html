@@ -950,6 +950,100 @@
             padding: 2rem
         }
 
+        /* API REFRESH CONTAINER */
+        .api-refresh-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(20, 24, 33, 0.6), rgba(10, 12, 15, 0.7));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px dashed rgba(201, 168, 76, 0.25);
+            border-radius: var(--r);
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: border-color var(--tr);
+        }
+
+        .api-refresh-container:hover {
+            border-color: rgba(201, 168, 76, 0.4);
+        }
+
+        .api-info-text {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .api-badge {
+            background: rgba(201, 168, 76, 0.12);
+            color: var(--gold);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .api-sync-time {
+            color: var(--text2);
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+
+        .btn-api-refresh {
+            background: rgba(201, 168, 76, 0.08);
+            border: 1px solid var(--border);
+            color: var(--gold);
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all var(--tr);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .btn-api-refresh:hover:not(:disabled) {
+            background: var(--gold);
+            color: #000;
+            border-color: var(--gold);
+            box-shadow: 0 0 12px rgba(201, 168, 76, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-api-refresh:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-api-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .refresh-spinner {
+            animation: spin 1.5s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* STATS BAR */
         .stats-bar {
             display: grid;
@@ -3680,6 +3774,17 @@
                         <div class="banner-sub" data-i18n="ui_kappa_banner_sub">Has encontrado todos los items. ¡El
                             Kappa es tuyo!</div>
                     </div>
+                </div>
+                <!-- API Status & Refresh Info -->
+                <div class="api-refresh-container">
+                    <div class="api-info-text">
+                        <span class="api-badge" data-i18n="ui_api_version_info">Datos de: tarkov.dev API (vía GraphQL)</span>
+                        <span id="k-api-sync-time" class="api-sync-time">Última sincronización: Cargando...</span>
+                    </div>
+                    <button class="btn-api-refresh" id="btn-kappa-refresh" onclick="forceRefreshKappa()" title="Buscar actualizaciones en la API live">
+                        <span class="refresh-spinner" id="k-refresh-spinner" style="display:none">⏳</span>
+                        <span class="refresh-text" id="k-refresh-text" data-i18n="ui_btn_refresh_kappa">↻ Buscar nuevos items</span>
+                    </button>
                 </div>
                 <div class="stats-bar">
                     <div class="stat-card">

@@ -16,21 +16,23 @@ const setHtml = (id, html) => { const el = getEl(id); if (el) el.innerHTML = htm
 const setDisp = (id, s) => { const el = getEl(id); if (el) el.style.display = s; };
 
 // ═══════ API CACHE ═══════
-async function fetchWithCache(query, cacheKey, variables = {}, ttlHours = 24) {
+async function fetchWithCache(query, cacheKey, variables = {}, ttlHours = 24, forceRefresh = false) {
   const fullCacheKey = `${cacheKey}_${currentLang}_${gameMode}`;
-  const cached = localStorage.getItem(fullCacheKey);
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (Date.now() - parsed.timestamp < ttlHours * 60 * 60 * 1000) {
-        return parsed.data;
-      }
-    } catch (e) { }
+  if (!forceRefresh) {
+    const cached = localStorage.getItem(fullCacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < ttlHours * 60 * 60 * 1000) {
+          return parsed.data;
+        }
+      } catch (e) { }
+    }
   }
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables })
+    body: JSON.stringify({ query, variables, forceRefresh })
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -282,7 +284,13 @@ const i18n = {
     ui_pve: "PvE",
     ui_syncing: "Sincronizando...",
     toast_focus: "Enfocando...",
-    toast_no_detect: "No se detectaron elementos en la imagen"
+    toast_no_detect: "No se detectaron elementos en la imagen",
+    ui_api_version_info: "Datos de: tarkov.dev API (vía GraphQL)",
+    ui_api_sync_time: "Última sincronización: {0}",
+    ui_btn_refresh_kappa: "Buscar nuevos items",
+    toast_kappa_updating: "Buscando actualizaciones en la API live...",
+    toast_kappa_updated: "¡Lista de Kappa actualizada con la API live!",
+    toast_kappa_update_error: "Error al actualizar desde la API"
   },
   en: {
     nav_kappa: "KAPPA", nav_hideout: "HIDEOUT", nav_quests: "QUESTS", nav_prices: "PRICES",
@@ -414,7 +422,13 @@ const i18n = {
     ui_pve: "PvE",
     ui_syncing: "Syncing...",
     toast_focus: "Focusing...",
-    toast_no_detect: "No elements detected in image"
+    toast_no_detect: "No elements detected in image",
+    ui_api_version_info: "Data source: tarkov.dev API (via GraphQL)",
+    ui_api_sync_time: "Last sync: {0}",
+    ui_btn_refresh_kappa: "Check for new items",
+    toast_kappa_updating: "Checking live API for updates...",
+    toast_kappa_updated: "Kappa list updated from live API!",
+    toast_kappa_update_error: "Error updating from API"
   }
 };
 
@@ -556,6 +570,7 @@ function updateUI() {
 
   // Refresh existing dynamic UI components
   if (currentPage === 'home') updateHomeMini();
+  if (currentPage === 'kappa') updateKappaSyncTime();
 }
 
 function updateHeader() {
@@ -1112,12 +1127,15 @@ function toast(text, type = 't-found') {
 // ═══════════════════════════════
 const KAPPA_QUERY = `query GetKappa($lang: LanguageCode, $gameMode: GameMode) { tasks(lang: $lang, gameMode: $gameMode) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
 
-async function loadKappa() {
-  setDisp('k-loading', 'flex');
-  setDisp('k-error', 'none');
-  setDisp('k-content', 'none');
+async function loadKappa(forceRefresh = false) {
+  const isInitialLoad = kappaItems.length === 0;
+  if (isInitialLoad) {
+    setDisp('k-loading', 'flex');
+    setDisp('k-error', 'none');
+    setDisp('k-content', 'none');
+  }
   try {
-    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang, gameMode });
+    const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang, gameMode }, 24, forceRefresh);
     const tasks = data.tasks;
     let collector = tasks.find(t => t.name === 'The Collector');
     if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
@@ -1130,15 +1148,72 @@ async function loadKappa() {
       }
     }
     kappaItems.sort((a, b) => a.name.localeCompare(b.name));
-    setDisp('k-loading', 'none');
-    setDisp('k-content', 'block');
+    
+    if (isInitialLoad) {
+      setDisp('k-loading', 'none');
+      setDisp('k-content', 'block');
+    }
     updateKappaStats();
     renderKappa();
     updateHomeMini();
+    updateKappaSyncTime();
   } catch (e) {
-    setDisp('k-loading', 'none');
-    setDisp('k-error', 'flex');
-    setTxt('k-error-msg', `Error: ${e.message}`);
+    if (isInitialLoad) {
+      setDisp('k-loading', 'none');
+      setDisp('k-error', 'flex');
+      setTxt('k-error-msg', `Error: ${e.message}`);
+    } else {
+      throw e;
+    }
+  }
+}
+
+function updateKappaSyncTime() {
+  const fullCacheKey = `eft_cache_kappa_${currentLang}_${gameMode}`;
+  const cached = localStorage.getItem(fullCacheKey);
+  const el = getEl('k-api-sync-time');
+  if (!el) return;
+  
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      const date = new Date(parsed.timestamp);
+      const pad = (num) => String(num).padStart(2, '0');
+      const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+      
+      const pattern = i18n[currentLang].ui_api_sync_time || "Sincronizado: {0}";
+      el.textContent = pattern.replace('{0}', formattedDate);
+    } catch (e) {
+      el.textContent = currentLang === 'es' ? 'Sincronizado: Desconocido' : 'Synced: Unknown';
+    }
+  } else {
+    el.textContent = currentLang === 'es' ? 'Sincronizado: No guardado' : 'Synced: Not cached';
+  }
+}
+
+async function forceRefreshKappa() {
+  if (isReadOnly) { toast(i18n[currentLang].msg_readonly, 't-unfound'); return; }
+  
+  const btn = getEl('btn-kappa-refresh');
+  const spinner = getEl('k-refresh-spinner');
+  const text = getEl('k-refresh-text');
+  
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.style.display = 'inline-block';
+  if (text) text.textContent = i18n[currentLang].toast_kappa_updating;
+  
+  toast(i18n[currentLang].toast_kappa_updating, 't-found');
+  
+  try {
+    await loadKappa(true);
+    toast(i18n[currentLang].toast_kappa_updated, 't-found');
+  } catch (err) {
+    console.error(err);
+    toast(i18n[currentLang].toast_kappa_update_error, 't-unfound');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.style.display = 'none';
+    if (text) text.textContent = `↻ ${i18n[currentLang].ui_btn_refresh_kappa}`;
   }
 }
 
@@ -1739,7 +1814,7 @@ function toggleLevelBody(level) {
 
 // ═══════ GLOBAL BUTTONS ═══════
 document.getElementById('btn-reload').addEventListener('click', () => {
-  if (currentPage === 'kappa') { kappaItems = []; loadKappa(); }
+  if (currentPage === 'kappa') { forceRefreshKappa(); }
   else if (currentPage === 'hideout') { hideoutStations = []; loadHideout(); }
 });
 

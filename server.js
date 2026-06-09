@@ -320,19 +320,20 @@ app.put('/api/profile', authenticateToken, (req, res) => {
 // ═══════ TARKOV API PROXY & CACHE ═══════
 app.post('/api/tarkov-data', async (req, res) => {
     try {
-        const { query, variables } = req.body;
+        const { query, variables, forceRefresh } = req.body;
         if (!query) return res.status(400).json({ error: 'Query requerida' });
 
         const hash = crypto.createHash('md5').update(JSON.stringify({ query, variables })).digest('hex');
 
-        // Buscar en caché (vencimiento 24h)
-        const cached = getRow("SELECT data FROM api_cache WHERE cache_key = ? AND created_at > datetime('now', '-24 hours')", [hash]);
-
-        if (cached) {
-            return res.json(JSON.parse(cached.data));
+        // Buscar en caché (vencimiento 24h) si no se fuerza la recarga
+        if (!forceRefresh) {
+            const cached = getRow("SELECT data FROM api_cache WHERE cache_key = ? AND created_at > datetime('now', '-24 hours')", [hash]);
+            if (cached) {
+                return res.json(JSON.parse(cached.data));
+            }
         }
 
-        // Si no está en caché o venció, llamar a tarkov.dev
+        // Si no está en caché, venció o se fuerza la recarga, llamar a tarkov.dev
         const response = await fetch('https://api.tarkov.dev/graphql', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
