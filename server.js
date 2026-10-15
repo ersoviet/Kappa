@@ -318,6 +318,133 @@ app.put('/api/profile', authenticateToken, (req, res) => {
 });
 
 // ═══════ TARKOV API PROXY & CACHE ═══════
+
+async function fetchTarkovJsonFallback(query, variables = {}) {
+    const lang = variables.lang || 'es';
+    const gameMode = variables.gameMode === 'pve' ? 'pve' : 'regular';
+    const langCode = lang === 'es' ? 'es' : 'en';
+
+    const isTasksQuery = query.includes('tasks') || query.includes('GetKappa') || query.includes('GetQuests');
+    const isHideoutQuery = query.includes('hideoutStations') || query.includes('GetHideout');
+
+    if (isTasksQuery) {
+        const [tasksRes, itemsRes, langTasksRes, langItemsRes] = await Promise.all([
+            fetch(`https://json.tarkov.dev/${gameMode}/tasks`).then(r => r.json()),
+            fetch(`https://json.tarkov.dev/${gameMode}/items`).then(r => r.json()),
+            fetch(`https://json.tarkov.dev/${gameMode}/tasks_${langCode}`).then(r => r.json()).catch(() => ({ data: {} })),
+            fetch(`https://json.tarkov.dev/${gameMode}/items_${langCode}`).then(r => r.json()).catch(() => ({ data: {} }))
+        ]);
+
+        const tasksMap = tasksRes.data?.tasks || {};
+        const itemsMap = itemsRes.data?.items || {};
+        const taskTranslations = langTasksRes.data || {};
+        const itemTranslations = langItemsRes.data || {};
+
+        const tasksList = [];
+        for (const taskId in tasksMap) {
+            const rawTask = tasksMap[taskId];
+            const taskName = taskTranslations[rawTask.name] || rawTask.name;
+
+            const objectives = [];
+            for (const rawObj of (rawTask.objectives || [])) {
+                if (rawObj.items && rawObj.items.length > 0) {
+                    for (const itemId of rawObj.items) {
+                        const rawItem = itemsMap[itemId];
+                        const itemName = rawItem ? (itemTranslations[rawItem.name] || rawItem.name) : itemId;
+                        const itemShortName = rawItem ? (itemTranslations[rawItem.shortName] || rawItem.shortName) : '';
+                        const iconLink = rawItem?.iconLink || `https://assets.tarkov.dev/${itemId}-icon.webp`;
+                        const wikiLink = rawItem?.wikiLink || '';
+
+                        objectives.push({
+                            id: rawObj.id,
+                            type: rawObj.type,
+                            count: rawObj.count || 1,
+                            foundInRaid: rawObj.foundInRaid ?? true,
+                            item: {
+                                id: itemId,
+                                name: itemName,
+                                shortName: itemShortName,
+                                iconLink,
+                                wikiLink
+                            }
+                        });
+                    }
+                } else {
+                    objectives.push({
+                        id: rawObj.id,
+                        type: rawObj.type,
+                        count: rawObj.count || 1,
+                        foundInRaid: rawObj.foundInRaid ?? false
+                    });
+                }
+            }
+
+            tasksList.push({
+                id: rawTask.id,
+                name: taskName,
+                normalizedName: rawTask.normalizedName,
+                minPlayerLevel: rawTask.minPlayerLevel || 1,
+                factionName: rawTask.factionName || 'Any',
+                trader: { id: rawTask.trader, name: rawTask.trader },
+                objectives
+            });
+        }
+
+        return { data: { tasks: tasksList } };
+    }
+
+    if (isHideoutQuery) {
+        const [hRes, hLangRes, iRes, iLangRes] = await Promise.all([
+            fetch(`https://json.tarkov.dev/${gameMode}/hideout`).then(r => r.json()),
+            fetch(`https://json.tarkov.dev/${gameMode}/hideout_${langCode}`).then(r => r.json()).catch(() => ({ data: {} })),
+            fetch(`https://json.tarkov.dev/${gameMode}/items`).then(r => r.json()),
+            fetch(`https://json.tarkov.dev/${gameMode}/items_${langCode}`).then(r => r.json()).catch(() => ({ data: {} }))
+        ]);
+        const hMap = hRes.data || {};
+        const hTrans = hLangRes.data || {};
+        const iMap = iRes.data?.items || {};
+        const iTrans = iLangRes.data || {};
+
+        const stations = [];
+        for (const sId in hMap) {
+            const rawS = hMap[sId];
+            const sName = hTrans[rawS.name] || rawS.name;
+            const levels = [];
+            for (const lvl of (rawS.levels || [])) {
+                const itemRequirements = [];
+                for (const ir of (lvl.itemRequirements || [])) {
+                    const itemId = ir.item;
+                    const it = iMap[itemId];
+                    const itName = it ? (iTrans[it.name] || it.name) : itemId;
+                    itemRequirements.push({
+                        count: ir.count,
+                        item: {
+                            id: itemId,
+                            name: itName,
+                            shortName: it ? (iTrans[it.shortName] || it.shortName) : '',
+                            iconLink: it?.iconLink || `https://assets.tarkov.dev/${itemId}-icon.webp`
+                        }
+                    });
+                }
+                levels.push({
+                    id: lvl.id,
+                    level: lvl.level,
+                    itemRequirements
+                });
+            }
+            stations.push({
+                id: rawS.id,
+                name: sName,
+                normalizedName: rawS.normalizedName,
+                levels
+            });
+        }
+        return { data: { hideoutStations: stations } };
+    }
+
+    throw new Error('Unsupported fallback query');
+}
+
 app.post('/api/tarkov-data', async (req, res) => {
     try {
         const { query, variables, forceRefresh } = req.body;
@@ -333,15 +460,31 @@ app.post('/api/tarkov-data', async (req, res) => {
             }
         }
 
-        // Si no está en caché, venció o se fuerza la recarga, llamar a tarkov.dev
-        const response = await fetch('https://api.tarkov.dev/graphql', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, variables })
-        });
+        let data = null;
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
+        // Intentar primero GraphQL oficial
+        try {
+            const response = await fetch('https://api.tarkov.dev/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, variables })
+            });
+
+            if (response.ok) {
+                const json = await response.json();
+                if (json && json.data && !json.errors) {
+                    data = json;
+                }
+            }
+        } catch (gqlErr) {
+            console.warn('GraphQL API network error, falling back to JSON API:', gqlErr.message);
+        }
+
+        // Si GraphQL no respondió o devolvió error (como 422/503 "GraphQL server unavailable"), usar JSON API
+        if (!data || !data.data) {
+            console.log('Using JSON API fallback for Tarkov data...');
+            data = await fetchTarkovJsonFallback(query, variables);
+        }
 
         if (data && data.data) {
             db.run('INSERT OR REPLACE INTO api_cache (cache_key, data, created_at) VALUES (?, ?, datetime("now"))', [hash, JSON.stringify(data)]);
@@ -351,7 +494,7 @@ app.post('/api/tarkov-data', async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('Tarkov Proxy Error:', err);
-        res.status(500).json({ error: 'Error al obtener datos de Tarkov API' });
+        res.status(500).json({ error: 'Error al obtener datos de Tarkov API: ' + err.message });
     }
 });
 

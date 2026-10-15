@@ -285,7 +285,7 @@ const i18n = {
     ui_syncing: "Sincronizando...",
     toast_focus: "Enfocando...",
     toast_no_detect: "No se detectaron elementos en la imagen",
-    ui_api_version_info: "Datos de: tarkov.dev API (vía GraphQL)",
+    ui_api_version_info: "Datos de: tarkov.dev live API",
     ui_api_sync_time: "Última sincronización: {0}",
     ui_btn_refresh_kappa: "Buscar nuevos items",
     toast_kappa_updating: "Buscando actualizaciones en la API live...",
@@ -423,7 +423,7 @@ const i18n = {
     ui_syncing: "Syncing...",
     toast_focus: "Focusing...",
     toast_no_detect: "No elements detected in image",
-    ui_api_version_info: "Data source: tarkov.dev API (via GraphQL)",
+    ui_api_version_info: "Data source: tarkov.dev live API",
     ui_api_sync_time: "Last sync: {0}",
     ui_btn_refresh_kappa: "Check for new items",
     toast_kappa_updating: "Checking live API for updates...",
@@ -1125,7 +1125,7 @@ function toast(text, type = 't-found') {
 // ═══════════════════════════════
 // KAPPA MODULE
 // ═══════════════════════════════
-const KAPPA_QUERY = `query GetKappa($lang: LanguageCode, $gameMode: GameMode) { tasks(lang: $lang, gameMode: $gameMode) { id name objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
+const KAPPA_QUERY = `query GetKappa($lang: LanguageCode, $gameMode: GameMode) { tasks(lang: $lang, gameMode: $gameMode) { id name normalizedName objectives { ... on TaskObjectiveItem { type item { id name shortName iconLink wikiLink } count foundInRaid } } } }`;
 
 async function loadKappa(forceRefresh = false) {
   const isInitialLoad = kappaItems.length === 0;
@@ -1137,11 +1137,11 @@ async function loadKappa(forceRefresh = false) {
   try {
     const data = await fetchWithCache(KAPPA_QUERY, 'eft_cache_kappa', { lang: currentLang, gameMode }, 24, forceRefresh);
     const tasks = data.tasks;
-    let collector = tasks.find(t => t.name === 'The Collector');
-    if (!collector) collector = [...tasks].sort((a, b) => b.objectives.filter(o => o.item).length - a.objectives.filter(o => o.item).length)[0];
+    let collector = tasks.find(t => t.id === '5c51aac186f77432ea65c552' || t.normalizedName === 'collector' || t.name === 'The Collector' || t.name === 'Coleccionista' || t.name === 'El coleccionista');
+    if (!collector) collector = [...tasks].sort((a, b) => ((b.objectives || []).filter(o => o.item).length) - ((a.objectives || []).filter(o => o.item).length))[0];
     const seen = new Set();
     kappaItems = [];
-    for (const obj of collector.objectives) {
+    for (const obj of (collector?.objectives || [])) {
       if (obj.item && !seen.has(obj.item.id)) {
         seen.add(obj.item.id);
         kappaItems.push({ id: obj.item.id, name: obj.item.name, shortName: obj.item.shortName, iconLink: obj.item.iconLink, count: obj.count || 1, foundInRaid: obj.foundInRaid });
@@ -1205,6 +1205,8 @@ async function forceRefreshKappa() {
   toast(i18n[currentLang].toast_kappa_updating, 't-found');
   
   try {
+    const fullCacheKey = `eft_cache_kappa_${currentLang}_${gameMode}`;
+    localStorage.removeItem(fullCacheKey);
     await loadKappa(true);
     toast(i18n[currentLang].toast_kappa_updated, 't-found');
   } catch (err) {
