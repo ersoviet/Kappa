@@ -340,9 +340,19 @@ async function fetchTarkovJsonFallback(query, variables = {}) {
         const taskTranslations = langTasksRes.data || {};
         const itemTranslations = langItemsRes.data || {};
 
+        let targetTaskIds = Object.keys(tasksMap);
+        if (query.includes('GetKappa')) {
+            const collectorId = Object.keys(tasksMap).find(id => {
+                const t = tasksMap[id];
+                return id === '5c51aac186f77432ea65c552' || t.normalizedName === 'collector';
+            });
+            if (collectorId) targetTaskIds = [collectorId];
+        }
+
         const tasksList = [];
-        for (const taskId in tasksMap) {
+        for (const taskId of targetTaskIds) {
             const rawTask = tasksMap[taskId];
+            if (!rawTask) continue;
             const taskName = taskTranslations[rawTask.name] || rawTask.name;
 
             const objectives = [];

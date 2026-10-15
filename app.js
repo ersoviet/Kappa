@@ -38,10 +38,28 @@ async function fetchWithCache(query, cacheKey, variables = {}, ttlHours = 24, fo
   const data = await res.json();
   if (data.errors) throw new Error(data.errors[0].message);
 
-  localStorage.setItem(fullCacheKey, JSON.stringify({
-    timestamp: Date.now(),
-    data: data.data
-  }));
+  try {
+    localStorage.setItem(fullCacheKey, JSON.stringify({
+      timestamp: Date.now(),
+      data: data.data
+    }));
+  } catch (storageErr) {
+    console.warn(`localStorage quota exceeded for ${fullCacheKey}. Purging older caches...`, storageErr);
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('eft_cache_') && k !== fullCacheKey) {
+          localStorage.removeItem(k);
+        }
+      }
+      localStorage.setItem(fullCacheKey, JSON.stringify({
+        timestamp: Date.now(),
+        data: data.data
+      }));
+    } catch (e2) {
+      console.warn('Storage quota still exceeded; running in-memory without persistent cache:', e2);
+    }
+  }
   return data.data;
 }
 
